@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -13,6 +14,8 @@ import (
 )
 
 var rSS = []string{"bpjs", "manajemen"}
+
+var loincRe = regexp.MustCompile(`^\d{1,7}-\d$`)
 
 func (s *Server) routesSatuSehat() {
 	m, p := s.mux, s.Prefix
@@ -53,6 +56,9 @@ func (s *Server) ssPage(w http.ResponseWriter, r *http.Request) {
 			(SELECT COUNT(*) FROM prosedur_pasien x WHERE x.no_rawat=r.no_rawat) pr_total,
 			(SELECT COUNT(*) FROM satu_sehat_procedure x WHERE x.no_rawat=r.no_rawat AND x.id_procedure<>'') pr_kirim,
 			(`+obsCount()+`) obs_kirim,
+			(SELECT COUNT(*) FROM resep_obat ro JOIN satu_sehat_medicationrequest x ON x.no_resep=ro.no_resep WHERE ro.no_rawat=r.no_rawat AND x.id_medicationrequest<>'') obat_kirim,
+			(SELECT COUNT(*) FROM permintaan_lab pl JOIN satu_sehat_diagnosticreport_lab x ON x.noorder=pl.noorder WHERE pl.no_rawat=r.no_rawat AND x.id_diagnosticreport<>'')
+			+ (SELECT COUNT(*) FROM permintaan_radiologi pr JOIN satu_sehat_diagnosticreport_radiologi x ON x.noorder=pr.noorder WHERE pr.no_rawat=r.no_rawat AND x.id_diagnosticreport<>'') hasil_kirim,
 			IFNULL(m.id_lokasi_satusehat,'') lokasi, er.pesan galat
 			FROM reg_periksa r JOIN pasien p ON p.no_rkm_medis=r.no_rkm_medis JOIN poliklinik pl ON pl.kd_poli=r.kd_poli JOIN dokter dk ON dk.kd_dokter=r.kd_dokter
 			LEFT JOIN pegawai pg ON pg.nik=r.kd_dokter LEFT JOIN satu_sehat_encounter e ON e.no_rawat=r.no_rawat LEFT JOIN app_satusehat_encounter_status es ON es.no_rawat=r.no_rawat
@@ -71,6 +77,14 @@ func (s *Server) ssPage(w http.ResponseWriter, r *http.Request) {
 		d["Kamar"] = s.rows(ctx, `SELECT k.kd_kamar, b.nm_bangsal, k.kelas, IFNULL(m.id_lokasi_satusehat,'') id_lokasi FROM kamar k JOIN bangsal b ON b.kd_bangsal=k.kd_bangsal LEFT JOIN satu_sehat_mapping_lokasi_ranap m ON m.kd_kamar=k.kd_kamar WHERE k.statusdata='1' ORDER BY b.nm_bangsal, k.kd_kamar`)
 		d["Dokter"] = s.rows(ctx, `SELECT d.kd_dokter, d.nm_dokter, IFNULL(pg.no_ktp,'') no_ktp, IFNULL(i.ihs,'') ihs FROM dokter d LEFT JOIN pegawai pg ON pg.nik=d.kd_dokter
 			LEFT JOIN app_satusehat_ihs i ON i.jenis='Practitioner' AND i.nik=pg.no_ktp WHERE d.status='1' ORDER BY d.nm_dokter`)
+	case "terminologi":
+		d["Obat"] = s.rows(ctx, `SELECT b.kode_brng, b.nama_brng, b.kode_sat, IFNULL(m.obat_code,'') kfa, IFNULL(m.obat_display,'') kfa_display, IFNULL(m.form_code,'') form_code, IFNULL(m.form_display,'') form_display,
+			IFNULL(m.route_code,'') route_code, IFNULL(m.route_display,'') route_display, IFNULL(m.denominator_code,'') satuan
+			FROM databarang b LEFT JOIN satu_sehat_mapping_obat m ON m.kode_brng=b.kode_brng WHERE b.status='1' ORDER BY m.obat_code IS NOT NULL, b.nama_brng`)
+		d["Lab"] = s.rows(ctx, `SELECT t.id_template, t.Pemeriksaan, j.nm_perawatan, IFNULL(m.code,'') code, IFNULL(m.display,'') display, IFNULL(m.sampel_code,'') sampel_code, IFNULL(m.sampel_display,'') sampel_display
+			FROM template_laboratorium t JOIN jns_perawatan_lab j ON j.kd_jenis_prw=t.kd_jenis_prw LEFT JOIN satu_sehat_mapping_lab m ON m.id_template=t.id_template ORDER BY j.nm_perawatan, t.urut`)
+		d["Rad"] = s.rows(ctx, `SELECT j.kd_jenis_prw, j.nm_perawatan, IFNULL(m.code,'') code, IFNULL(m.display,'') display FROM jns_perawatan_radiologi j LEFT JOIN satu_sehat_mapping_radiologi m ON m.kd_jenis_prw=j.kd_jenis_prw WHERE j.status='1' ORDER BY j.nm_perawatan`)
+		d["Depo"] = s.rows(ctx, `SELECT b.kd_bangsal, b.nm_bangsal, IFNULL(m.id_lokasi_satusehat,'') id_lokasi FROM bangsal b LEFT JOIN satu_sehat_mapping_lokasi_depo_farmasi m ON m.kd_bangsal=b.kd_bangsal WHERE b.kd_bangsal IN ('AP','GF')`)
 	case "log":
 		d["Log"] = s.rows(ctx, "SELECT * FROM app_satusehat_log ORDER BY id DESC LIMIT 100")
 	}
@@ -151,6 +165,8 @@ func (s *Server) ssAksi(w http.ResponseWriter, r *http.Request) {
 			table, key := "satu_sehat_mapping_lokasi_ralan", "kd_poli"
 			if jenis == "ranap" {
 				table, key = "satu_sehat_mapping_lokasi_ranap", "kd_kamar"
+			} else if jenis == "depo" {
+				table, key = "satu_sehat_mapping_lokasi_depo_farmasi", "kd_bangsal"
 			}
 			if id == "" {
 				_, err = s.DB.ExecContext(ctx, "DELETE FROM "+table+" WHERE "+key+"=?", kode)
@@ -161,6 +177,42 @@ func (s *Server) ssAksi(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		s.back(w, r, back, err, "Mapping lokasi "+kode+" tersimpan "+id)
+	case "map-obat":
+		kd, kfa := f("kode_brng"), strings.TrimSpace(f("kfa"))
+		var err error
+		if kfa == "" {
+			_, err = s.DB.ExecContext(ctx, "DELETE FROM satu_sehat_mapping_obat WHERE kode_brng=?", kd)
+		} else if len(kfa) < 8 || strings.Trim(kfa, "0123456789") != "" {
+			err = errors.New("kode KFA harus angka (min. 8 digit, mis. 93xxxxxx untuk produk/POA)")
+		} else {
+			_, err = s.DB.ExecContext(ctx, `INSERT INTO satu_sehat_mapping_obat VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE obat_code=VALUES(obat_code), obat_display=VALUES(obat_display),
+				form_code=VALUES(form_code), form_display=VALUES(form_display), denominator_code=VALUES(denominator_code), route_code=VALUES(route_code), route_display=VALUES(route_display)`,
+				kd, kfa, satusehat.SysKFA, f("kfa_display"), f("form_code"), satusehat.SysMedForm, f("form_display"), "", "", f("satuan"), "http://terminology.hl7.org/CodeSystem/v3-orderableDrugForm", f("route_code"), satusehat.SysRoute, f("route_display"))
+			s.DB.ExecContext(ctx, "DELETE FROM satu_sehat_medication WHERE kode_brng=?", kd) // kirim ulang Medication dengan kode baru
+		}
+		s.back(w, r, back, err, "Mapping obat "+kd+" tersimpan")
+	case "map-lab", "map-rad":
+		code := strings.TrimSpace(f("code"))
+		var err error
+		if code != "" && !loincRe.MatchString(code) {
+			s.back(w, r, back, errors.New("format kode LOINC tidak valid (contoh 718-7)"), "")
+			return
+		}
+		if r.PathValue("aksi") == "map-lab" {
+			if code == "" {
+				_, err = s.DB.ExecContext(ctx, "DELETE FROM satu_sehat_mapping_lab WHERE id_template=?", f("id"))
+			} else {
+				_, err = s.DB.ExecContext(ctx, "INSERT INTO satu_sehat_mapping_lab VALUES (?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE code=VALUES(code), display=VALUES(display), sampel_code=VALUES(sampel_code), sampel_display=VALUES(sampel_display)",
+					f("id"), code, satusehat.SysLOINC, f("display"), f("sampel_code"), satusehat.SysSNOMED, f("sampel_display"))
+			}
+		} else {
+			if code == "" {
+				_, err = s.DB.ExecContext(ctx, "DELETE FROM satu_sehat_mapping_radiologi WHERE kd_jenis_prw=?", f("id"))
+			} else {
+				_, err = s.DB.ExecContext(ctx, "INSERT INTO satu_sehat_mapping_radiologi (kd_jenis_prw,code,system,display) VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE code=VALUES(code), display=VALUES(display)", f("id"), code, satusehat.SysLOINC, f("display"))
+			}
+		}
+		s.back(w, r, back, err, "Mapping "+f("id")+" tersimpan")
 	case "nik-dokter":
 		kd, nik := f("kd_dokter"), strings.TrimSpace(f("no_ktp"))
 		if nik != "" && (len(nik) != 16 || strings.Trim(nik, "0123456789") != "") {

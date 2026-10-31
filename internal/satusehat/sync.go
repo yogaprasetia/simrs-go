@@ -64,6 +64,8 @@ func (c *Client) CreateLocation(ctx context.Context, db *sql.DB, jenis, kode str
 		nama, table, key = val(ctx, db, "SELECT nm_poli FROM poliklinik WHERE kd_poli=?", kode), "satu_sehat_mapping_lokasi_ralan", "kd_poli"
 	case "ranap":
 		nama, table, key = val(ctx, db, "SELECT CONCAT(b.nm_bangsal,' ',k.kd_kamar) FROM kamar k JOIN bangsal b ON b.kd_bangsal=k.kd_bangsal WHERE k.kd_kamar=?", kode), "satu_sehat_mapping_lokasi_ranap", "kd_kamar"
+	case "depo":
+		nama, table, key = val(ctx, db, "SELECT CONCAT('Depo Farmasi ',nm_bangsal) FROM bangsal WHERE kd_bangsal=?", kode), "satu_sehat_mapping_lokasi_depo_farmasi", "kd_bangsal"
 	default:
 		return "", errors.New("jenis lokasi tidak dikenal")
 	}
@@ -435,6 +437,8 @@ func (c *Client) sync(ctx context.Context, db *sql.DB, noRawat string) Result {
 			}
 		}
 	}
+
+	c.syncStage2(ctx, db, v, pasien, dokter, pRef, encRef, &res)
 
 	// ---- Encounter finished
 	if val(ctx, db, "SELECT status FROM app_satusehat_encounter_status WHERE no_rawat=?", noRawat) == "finished" {

@@ -758,7 +758,7 @@ func TestWebGizi(t *testing.T) {
 	prw.postOK("/rawat/soap", url.Values{"no_rawat": {no}, "keluhan": {"lemas"}, "alergi": {"udang"}})
 	daf.postOK("/rawat/kamar-masuk", url.Values{"no_rawat": {no}, "kd_kamar": {"ANG.01"}, "diagnosa_awal": {"DM"}, "kd_dokter": {"D0000002"}})
 	body := gz.get("/gizi", 200)
-	if !strings.Contains(body, "1 belum punya diet") {
+	if !strings.Contains(body, "1 belum punya diet") || !strings.Contains(body, "udang") {
 		t.Fatal("pasien tanpa diet")
 	}
 	gz.postOK("/gizi/simpan", url.Values{"tab": {"pasien"}, "tgl": {core.Today()}, "no_rawat": {no}, "w_Pagi": {"D03"}, "w_Siang": {"D03"}, "w_Sore": {""}, "w_Malam": {"D03"}})
@@ -781,6 +781,36 @@ func TestWebGizi(t *testing.T) {
 	gz.crawl("/gizi")
 	gz.crawl("/gizi?tab=rekap")
 	if l := lb.Take(); strings.Contains(l, "render") || strings.Contains(l, "query:") || strings.Contains(l, "scan:") || strings.Contains(l, "error GET") {
+		t.Fatalf("log error:\n%s", l)
+	}
+}
+
+func TestWebSatuSehatTerminologi(t *testing.T) {
+	d, ts, _, lb := setup(t)
+	defer ts.Close()
+	bp := login(t, ts.URL, "daftar")
+	mgr := login(t, ts.URL, "mgr")
+	if !strings.Contains(bp.get("/satusehat?tab=terminologi", 200), "718-7") {
+		t.Fatal("seed LOINC tidak tampil")
+	}
+	mgr.get("/satusehat?tab=terminologi", 200)
+	bp.postErr("/satusehat/map-obat", url.Values{"tab": {"terminologi"}, "kode_brng": {"B000006"}, "kfa": {"AML"}}, "KFA")
+	bp.postOK("/satusehat/map-obat", url.Values{"tab": {"terminologi"}, "kode_brng": {"B000006"}, "kfa": {"93000001"}, "kfa_display": {"Amlodipine 5 mg"}, "form_code": {"BS066"}, "form_display": {"Tablet"}, "route_code": {"O"}, "route_display": {"Oral"}, "satuan": {"TAB"}})
+	if q1(t, d, "SELECT obat_code FROM satu_sehat_mapping_obat WHERE kode_brng='B000006'") != "93000001" {
+		t.Fatal("mapping obat")
+	}
+	bp.postErr("/satusehat/map-lab", url.Values{"tab": {"terminologi"}, "id": {"1"}, "code": {"hb"}}, "LOINC")
+	bp.postOK("/satusehat/map-lab", url.Values{"tab": {"terminologi"}, "id": {"1"}, "code": {"718-7"}, "display": {"Hemoglobin"}, "sampel_code": {"119297000"}, "sampel_display": {"Blood specimen"}})
+	bp.postOK("/satusehat/map-rad", url.Values{"tab": {"terminologi"}, "id": {"RAD003"}, "code": {"30745-4"}, "display": {"XR Abdomen 2 Views"}})
+	bp.postOK("/satusehat/map-rad", url.Values{"tab": {"terminologi"}, "id": {"RAD003"}, "code": {""}})
+	if q1(t, d, "SELECT COUNT(*) FROM satu_sehat_mapping_radiologi WHERE kd_jenis_prw='RAD003'") != "0" {
+		t.Fatal("hapus mapping rad")
+	}
+	if resp, _ := mgr.c.PostForm(ts.URL+"/satusehat/map-lab", url.Values{"_csrf": {mgr.csrf}}); resp.StatusCode != 403 {
+		t.Fatal("manajemen tidak boleh ubah mapping")
+	}
+	bp.crawl("/satusehat?tab=terminologi")
+	if l := lb.Take(); strings.Contains(l, "render") || strings.Contains(l, "query:") || strings.Contains(l, "error GET") {
 		t.Fatalf("log error:\n%s", l)
 	}
 }

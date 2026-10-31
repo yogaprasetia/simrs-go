@@ -1,10 +1,10 @@
-{{define "content"}}<h1>Gizi <form class="inline"><input type="hidden" name="tab" value="{{.Tab}}"><input type="date" name="tgl" value="{{.Tgl}}" onchange="this.form.submit()"></form>
+{{define "content"}}<h1>Gizi <form class="inline datehead"><input type="hidden" name="tab" value="{{.Tab}}"><input type="date" name="tgl" value="{{.Tgl}}" onchange="this.form.submit()"></form>
 <a class="btn" href="?tgl={{.Kemarin}}&tab={{.Tab}}">‹</a><a class="btn" href="?tgl={{.Besok}}&tab={{.Tab}}">›</a></h1>
 <div class="tabs"><a href="?tgl={{.Tgl}}&tab=pasien" class="{{if eq .Tab "pasien"}}on{{end}}">Diet pasien</a><a href="?tgl={{.Tgl}}&tab=rekap" class="{{if eq .Tab "rekap"}}on{{end}}">Rekap dapur & etiket</a><a href="?tgl={{.Tgl}}&tab=master" class="{{if eq .Tab "master"}}on{{end}}">Master diet</a></div>
 {{if eq .Tab "pasien"}}
 <div class="card info">{{len .Pasien}} pasien rawat inap pada {{tgl .Tgl}}{{if .Belum}} · <b class="danger">{{.Belum}} belum punya diet</b>{{end}}
 <form method="post" action="{{.P}}/gizi/salin" class="inline">{{template "csrf" .}}<input type="hidden" name="tab" value="pasien"><input type="hidden" name="tgl" value="{{.Tgl}}"><input type="hidden" name="dari" value="{{.Kemarin}}"><button class="btn">Salin diet dari {{tgl .Kemarin}}</button></form></div>
-<table class="list"><tr><th>Kamar</th><th>Pasien</th><th>Diagnosa / alergi</th>{{range .Waktu}}<th>{{.waktu}} <small>{{.jam}}</small></th>{{end}}<th></th></tr>
+<table class="list gizi"><tr><th>Kamar</th><th>Pasien</th><th>Diagnosa / alergi</th>{{range .Waktu}}<th>{{.waktu}} <small>{{.jam}}</small></th>{{end}}<th></th></tr>
 {{range $p := .Pasien}}{{$s := index $.Set $p.no_rawat}}<tr class="{{if not $s}}warnrow{{end}}"><td>{{$p.kd_kamar}}<br><small>{{$p.nm_bangsal}} · {{$p.kelas}}</small></td><td>{{$p.no_rkm_medis}} <b>{{$p.nm_pasien}}</b><br><small>{{$p.jk}} · {{$p.umur}}</small></td>
 <td>{{$p.diagnosa_awal}}{{if $p.alergi}}<br><span class="danger small">⚠ {{$p.alergi}}</span>{{end}}</td>
 {{range $.Waktu}}<td><select name="w_{{.waktu}}" form="f{{$p.no_rawat}}" class="dietsel"><option value="">—</option>{{$cur := index $s .waktu}}{{range $.Diet}}<option value="{{.kd_diet}}" {{if eq2 $cur .kd_diet}}selected{{end}}>{{.nama_diet}}</option>{{end}}</select></td>{{end}}

@@ -225,3 +225,18 @@ INSERT IGNORE INTO app_set_akun VALUES
 INSERT IGNORE INTO diet VALUES ('D01','Nasi Biasa'),('D02','TKTP (Tinggi Kalori Tinggi Protein)'),('D03','DM 1700 kkal'),('D04','Rendah Garam II'),
 ('D05','Lunak (Nasi Tim)'),('D06','Bubur Saring'),('D07','Cair / Sonde'),('D08','Rendah Protein'),('D09','Rendah Lemak'),('D10','Diet Anak');
 INSERT IGNORE INTO jam_diet_pasien VALUES ('Pagi','06:30'),('Pagi2','09:30'),('Siang','11:30'),('Siang2','14:30'),('Sore','16:30'),('Malam','19:30');
+
+
+-- mapping LOINC pemeriksaan lab contoh & spesimen SNOMED-CT (dapat diubah di menu SATUSEHAT → Mapping)
+INSERT IGNORE INTO satu_sehat_mapping_lab VALUES
+(1,'718-7','http://loinc.org','Hemoglobin [Mass/volume] in Blood','119297000','http://snomed.info/sct','Blood specimen'),
+(2,'6690-2','http://loinc.org','Leukocytes [#/volume] in Blood by Automated count','119297000','http://snomed.info/sct','Blood specimen'),
+(3,'4544-3','http://loinc.org','Hematocrit [Volume Fraction] of Blood by Automated count','119297000','http://snomed.info/sct','Blood specimen'),
+(4,'777-3','http://loinc.org','Platelets [#/volume] in Blood by Automated count','119297000','http://snomed.info/sct','Blood specimen'),
+(5,'789-8','http://loinc.org','Erythrocytes [#/volume] in Blood by Automated count','119297000','http://snomed.info/sct','Blood specimen'),
+(6,'2345-7','http://loinc.org','Glucose [Mass/volume] in Serum or Plasma','119364003','http://snomed.info/sct','Serum specimen'),
+(7,'2093-3','http://loinc.org','Cholesterol [Mass/volume] in Serum or Plasma','119364003','http://snomed.info/sct','Serum specimen'),
+(8,'3084-1','http://loinc.org','Urate [Mass/volume] in Serum or Plasma','119364003','http://snomed.info/sct','Serum specimen');
+INSERT IGNORE INTO satu_sehat_mapping_radiologi (kd_jenis_prw,code,system,display) VALUES
+('RAD001','36643-5','http://loinc.org','XR Chest 2 Views'),
+('RAD002','36643-5','http://loinc.org','XR Chest 2 Views');

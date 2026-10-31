@@ -16,7 +16,7 @@ Aplikasi ini berupa satu file biner tanpa dependensi. Antarmukanya web, bisa dib
    - Diagnosa ICD-10 (prioritas, kasus baru/lama) dan prosedur ICD-9-CM.
    - Tindakan dengan tarif dari master.
    - E-resep, permintaan lab, dan riwayat kunjungan.
-3. **Farmasi**: antrean resep → validasi (memotong stok depo dan mencatat `riwayat_barang_medis`; ditolak bila stok kurang) → penyerahan. Ada etiket, penerimaan stok, dan opname.
+3. **Farmasi**: antrean resep → validasi (memotong stok depo dan mencatat `riwayat_barang_medis`; ditolak bila stok kurang) → penyerahan. Ada etiket dan stok opname depo.
 4. **Laboratorium**: order → input hasil per parameter. Flag H/L dihitung otomatis dari nilai rujukan L/P. Hasil bisa dicetak.
 5. **Rawat inap**
    - Masuk kamar dari ralan/IGD, pindah kamar, dan pulang dengan status pulang.
@@ -43,14 +43,32 @@ Aplikasi ini berupa satu file biner tanpa dependensi. Antarmukanya web, bisa dib
 10. **SATUSEHAT (Kemenkes, FHIR R4)**
     - Mengikuti alur "Kirim SATUSEHAT" Khanza, dengan tabel yang sama: `satu_sehat_encounter`, `satu_sehat_condition`, `satu_sehat_procedure`, `satu_sehat_observationttv*`, `satu_sehat_mapping_lokasi_ralan/ranap`, dan `pegawai.no_ktp` untuk NIK dokter.
     - Urutan kirim: **Encounter** (arrived; AMB/EMER/IMP) → **Condition** ICD-10 → **Procedure** ICD-9-CM → **Observation** tanda vital (nadi, napas, suhu, tensi sistolik/diastolik, TB, BB, lingkar perut; LOINC + UCUM) → **Encounter finished** dengan diagnosis dan riwayat status.
+    - Tahap 2 (tabel Khanza `satu_sehat_medication*`, `satu_sehat_servicerequest_*`, `satu_sehat_specimen_lab`, `satu_sehat_observation_lab`, `satu_sehat_diagnosticreport_*`):
+      - **Obat**: Medication (kode KFA) → MedicationRequest dari e-resep (frekuensi dan dosis dibaca dari aturan pakai, mis. "3x1", "2 x 1/2") → MedicationDispense setelah validasi farmasi, dari lokasi depo farmasi.
+      - **Lab**: ServiceRequest (LOINC) → Specimen (SNOMED-CT) saat sampel diambil → Observation hasil (angka + UCUM, atau teks; nilai rujukan dan flag H/L) → DiagnosticReport.
+      - **Radiologi**: ServiceRequest (LOINC, ACSN = no. order) → DiagnosticReport berisi expertise.
+      - Mapping KFA, LOINC, spesimen, dan lokasi depo diisi di tab **Mapping obat/lab/radiologi**. Mapping LOINC untuk parameter lab contoh sudah terisi. Item yang belum di-mapping dilewati dengan peringatan tanpa menghalangi Encounter finished.
     - Encounter diselesaikan setelah kasir lunas (rawat jalan) atau pasien pulang (rawat inap).
     - IHS pasien/dokter dicari lewat NIK lalu disimpan. Token OAuth2 diperbarui otomatis.
     - Location poli/kamar bisa dibuat langsung dari halaman mapping.
     - Pengiriman bisa per kunjungan, "kirim semua", atau otomatis berkala (`SATUSEHAT_AUTO_MENIT`). Aman diulang karena data yang sudah terkirim tidak dikirim lagi.
     - Penyebab gagal (NIK kosong, lokasi belum di-mapping, pesan OperationOutcome) tampil per kunjungan, dan semua panggilan dicatat di log.
-11. **Laporan**: kunjungan per poli (baru/lama, BPJS/non), 10 besar penyakit, pemeriksaan radiologi, tindakan operasi/VK, pendapatan, obat terbanyak, indikator BOR/ALOS/TOI/BTO/GDR, dan ekspor CSV.
-12. **Pengguna & keamanan**
-   - Login dengan peran: admin, pendaftaran, dokter, perawat, farmasi, lab, radiologi, ok (kamar operasi), kasir, bpjs, manajemen.
+11. **Logistik farmasi (pengadaan)**
+    - Supplier (`datasuplier`), surat pemesanan (`surat_pemesanan_medis`, bisa dicetak) → penerimaan faktur (`pemesanan`/`detailpesan`, diskon per item, PPN, meterai, no. batch, kedaluwarsa, harga beli master ikut diperbarui).
+    - Stok masuk ke gudang farmasi lalu dimutasi ke depo (`mutasibarang`), ditolak bila stok asal kurang. Ada peringatan stok depo di bawah minimal.
+    - Stok opname dengan nilai selisih (`opname`), kartu stok per barang/lokasi dari `riwayat_barang_medis`, dan daftar batch yang kedaluwarsa dalam 180 hari.
+12. **Keuangan & akuntansi**
+    - Bagan akun (`rekening`), jurnal otomatis yang selalu seimbang (`jurnal`/`detailjurnal`) dari: pembayaran kasir (pendapatan per kelompok billing, kas atau piutang penjamin), HPP obat, penerimaan faktur (persediaan, PPN masukan, hutang), bayar hutang, dan bayar piutang. Akun diatur di **Setelan akun**.
+    - Pembatalan nota oleh admin membuat jurnal balik, dan ditolak bila piutangnya sudah dicicil.
+    - Piutang pasien per penjamin dengan umur piutang (0–30, 31–60, 61–90, >90 hari), pembayaran klaim/cicilan, diskon, dan penghapusan piutang tak tertagih.
+    - Hutang supplier per jatuh tempo (yang lewat ditandai), pembayaran sebagian atau lunas.
+    - Jurnal umum manual, buku besar, neraca saldo, laba rugi, dan neraca (dengan laba ditahan).
+13. **Gizi**
+    - Diet pasien rawat inap per tanggal dan waktu makan (`diet`, `detail_beri_diet`, `jam_diet_pasien`), dengan peringatan alergi dan pasien yang belum punya diet.
+    - Salin diet dari hari sebelumnya (memakai kamar terbaru bila pasien pindah), rekap porsi per waktu/diet/bangsal untuk dapur, dan cetak etiket.
+14. **Laporan**: kunjungan per poli (baru/lama, BPJS/non), 10 besar penyakit, pemeriksaan radiologi, tindakan operasi/VK, pendapatan, obat terbanyak, indikator BOR/ALOS/TOI/BTO/GDR, dan ekspor CSV.
+15. **Pengguna & keamanan**
+   - Login dengan peran: admin, pendaftaran, dokter, perawat, farmasi, lab, radiologi, ok (kamar operasi), gizi, kasir, keuangan, bpjs, manajemen.
    - Password bcrypt, sesi di database, token CSRF di setiap form, dan audit log.
 
 ## Instalasi
@@ -92,7 +110,8 @@ Mapping kode: `poliklinik.kd_poli_bpjs` dan `dokter.kd_dokter_bpjs` harus diisi 
 1. Daftarkan RS di portal SATUSEHAT Kemenkes untuk mendapatkan Organization ID, Client ID, dan Client Secret (lingkungan dev/staging dulu).
 2. Isi `SATUSEHAT_MODE`, `SATUSEHAT_CLIENT_ID`, `SATUSEHAT_CLIENT_SECRET`, dan `SATUSEHAT_ORG_ID` di `simrs.env`, lalu restart.
 3. Login sebagai admin atau peran `bpjs`, buka **SATUSEHAT → Mapping**. Isi NIK setiap dokter, lalu isi atau **Buat** Location untuk tiap poli dan kamar.
-4. Pastikan pasien punya NIK. Kirim dari tab **Kirim data**, atau aktifkan `SATUSEHAT_AUTO_MENIT`.
+4. Untuk obat/lab/radiologi: buka tab **Mapping obat/lab/radiologi**, isi kode KFA tiap obat, cek LOINC lab/radiologi, dan buat Location depo farmasi.
+5. Pastikan pasien punya NIK. Kirim dari tab **Kirim data**, atau aktifkan `SATUSEHAT_AUTO_MENIT`.
 
 ## Pengujian
 
@@ -104,14 +123,17 @@ Pengujian memakai database `sik_test`. Atur `SIMRS_TEST_DSN` atau siapkan user `
 
 - **Inti**: alur lengkap ralan dan ranap, termasuk tarif, stok, kunci kasir, dan 20 registrasi paralel.
 - **Web**: semua peran, RBAC, CSRF, setiap halaman, unggah gambar (file palsu ditolak, path traversal 404), dan penelusuran semua tautan di halaman utama untuk menangkap URL rusak.
-- **SATUSEHAT**: alur ralan, IGD→ranap, token kedaluwarsa, idempotensi, pasien/dokter tanpa NIK, dan server tiruan dipastikan menolak payload yang salah.
+- **Logistik & keuangan**: SP → faktur (hitungan diskon/PPN/meterai) → mutasi → opname → bayar hutang; kasir tunai vs BPJS → piutang → klaim; setiap jurnal diperiksa seimbang, saldo akun dicocokkan angka per angka, neraca saldo dan neraca harus seimbang.
+- **Gizi**: diet hanya untuk pasien yang sedang dirawat, salin diet memakai kamar baru setelah pindah kamar, tidak ada duplikasi saat disalin ulang.
+- **SATUSEHAT**: alur ralan, IGD→ranap, token kedaluwarsa, idempotensi, pasien/dokter tanpa NIK, obat/lab/radiologi (termasuk item tanpa mapping dan depo belum di-mapping), dan server tiruan dipastikan menolak payload yang salah (KFA tidak valid, Observation lab tanpa Specimen, dsb.).
 - **BPJS**: LZString, AES, dan signature dicocokkan dengan pustaka `lz-string` JavaScript dan Node `crypto`, plus tes klien terhadap server tiruan.
 
 ## Batasan
 
-- Ini adalah subset dari Khanza (Khanza memiliki ratusan modul). Yang belum ada antara lain gizi, inventaris non-medis, kepegawaian, akuntansi/jurnal, INA-CBG grouper/E-Klaim, dan cetak berkas klaim.
+- Ini adalah subset dari Khanza (Khanza memiliki ratusan modul). Yang belum ada antara lain inventaris/logistik non-medis, kepegawaian dan penggajian, aset tetap/penyusutan, stok per batch (FEFO), INA-CBG grouper/E-Klaim, dan cetak berkas klaim.
 - Bridging BPJS belum diuji ke server BPJS sungguhan. Yang sudah diuji hanya server tiruan dengan algoritme yang sama.
-- SATUSEHAT juga baru diuji dengan server tiruan (`SATUSEHAT_MODE=mock`). Server tiruan ini memvalidasi aturan pokok: token, referensi, identifier unik, ICD/LOINC/UCUM, dan syarat finished. Server Kemenkes punya validasi lebih banyak, jadi uji dulu di `dev`/`stg` dengan kredensial RS sebelum `prod`. Resource lain (MedicationRequest/Dispense, ServiceRequest/Specimen/DiagnosticReport lab & radiologi, AllergyIntolerance, Composition) belum dikirim.
+- SATUSEHAT juga baru diuji dengan server tiruan (`SATUSEHAT_MODE=mock`). Server tiruan ini memvalidasi aturan pokok: token, referensi, identifier unik, ICD/LOINC/UCUM, dan syarat finished. Server Kemenkes punya validasi lebih banyak, jadi uji dulu di `dev`/`stg` dengan kredensial RS sebelum `prod`. Resource yang belum dikirim: AllergyIntolerance (alergi di ERM masih teks bebas, belum berkode SNOMED), Composition/resume medis, ImagingStudy (butuh PACS/DICOM), obat racikan, dan Medication untuk BHP non-KFA.
+- Akuntansi memakai bagan akun contoh. Sesuaikan dengan bagan akun RS lewat menu Rekening dan Setelan akun sebelum dipakai.
 - Bukan produk bersertifikat. Lakukan uji coba dan validasi sebelum dipakai untuk pelayanan nyata.
 
 ## Tangkapan layar
@@ -125,3 +147,9 @@ Pengujian memakai database `sik_test`. Atur `SIMRS_TEST_DSN` atau siapkan user `
 ![Input operasi](docs/operasi-input.png)
 ![SATUSEHAT](docs/satusehat.png)
 ![Mapping SATUSEHAT](docs/satusehat-mapping.png)
+![Penerimaan faktur](docs/logistik-faktur.png)
+![Jurnal](docs/jurnal.png)
+![Neraca](docs/neraca.png)
+![Piutang](docs/piutang.png)
+![Gizi](docs/gizi.png)
+![Mapping KFA/LOINC](docs/satusehat-terminologi.png)

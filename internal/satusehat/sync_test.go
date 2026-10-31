@@ -302,4 +302,131 @@ func TestMockMenolakPayloadSalah(t *testing.T) {
 	if _, err := c.Create(ctx, obs); err != nil {
 		t.Fatal(err)
 	}
+	// Medication tanpa kode KFA ditolak; Observation lab tanpa specimen ditolak
+	if _, err := c.Create(ctx, map[string]any{"resourceType": "Medication", "code": map[string]any{"coding": []any{map[string]any{"system": satusehat.SysKFA, "code": "AML5"}}},
+		"manufacturer": map[string]any{"reference": "Organization/100"}}); err == nil || !strings.Contains(err.Error(), "KFA") {
+		t.Fatalf("KFA: %v", err)
+	}
+	lab := map[string]any{"resourceType": "Observation", "status": "final",
+		"category": []any{map[string]any{"coding": []any{map[string]any{"code": "laboratory"}}}},
+		"code":     map[string]any{"coding": []any{map[string]any{"system": satusehat.SysLOINC, "code": "718-7"}}},
+		"subject":  map[string]any{"reference": "Patient/P0000000001"}, "encounter": map[string]any{"reference": "Encounter/" + id},
+		"effectiveDateTime": "2026-11-16T08:10:00+07:00", "issued": "2026-11-16T09:10:00+07:00", "valueString": "13"}
+	if _, err := c.Create(ctx, lab); err == nil || !strings.Contains(err.Error(), "specimen") {
+		t.Fatalf("lab tanpa specimen: %v", err)
+	}
+	if _, err := c.Create(ctx, map[string]any{"resourceType": "Immunization"}); err == nil {
+		t.Fatal("resource tak dikenal harus ditolak")
+	}
+}
+
+func TestSyncTahap2ObatLabRad(t *testing.T) {
+	d := testDB(t)
+	ctx := context.Background()
+	core.Now = func() time.Time { return time.Date(2026, 11, 17, 9, 0, 0, 0, core.Loc) }
+	defer func() { core.Now = func() time.Time { return time.Now().In(core.Loc) } }()
+	m := satusehat.NewMock("cid", "cs", "100000001")
+	auth, fhir, _ := m.Start()
+	c := satusehat.New(satusehat.Config{Mode: "mock", ClientID: "cid", ClientSecret: "cs", OrgID: "100000001", AuthURL: auth, BaseURL: fhir}, d)
+	for _, k := range []string{"INT"} {
+		if _, err := c.CreateLocation(ctx, d, "ralan", k); err != nil {
+			t.Fatal(err)
+		}
+	}
+	p := &core.Pasien{Nama: "Sari", JK: "P", TglLahir: "1985-02-02", NoKTP: "3372014202850002"}
+	var r core.RegResult
+	var resep, lab, rad string
+	must(t, d, func(x *sql.Tx) (err error) {
+		core.SimpanPasien(ctx, x, p)
+		r, err = core.Registrasi(ctx, x, core.RegInput{NoRM: p.NoRM, KdPoli: "INT", KdDokter: "D0000002", KdPJ: "A09"})
+		return
+	})
+	must(t, d, func(x *sql.Tx) error {
+		if _, err := core.SimpanSOAP(ctx, x, core.SOAP{NoRawat: r.NoRawat, Keluhan: "lemas", NIP: "D0000002"}); err != nil {
+			return err
+		}
+		if err := core.TambahDiagnosa(ctx, x, r.NoRawat, "I10", false); err != nil {
+			return err
+		}
+		var err error
+		if resep, err = core.BuatResep(ctx, x, r.NoRawat, "D0000002", []core.ItemResep{{KodeBrng: "B000006", Jml: 30, Aturan: "1 x 1 tablet"}, {KodeBrng: "B000001", Jml: 10, Aturan: "3x1 bila demam"}}); err != nil {
+			return err
+		}
+		if lab, err = core.PermintaanLab(ctx, x, r.NoRawat, "D0000002", "DM tipe 2", []string{"LAB002"}); err != nil {
+			return err
+		}
+		rad, err = core.PermintaanRadiologi(ctx, x, r.NoRawat, "D0000002", "DM", "", []string{"RAD001"})
+		return err
+	})
+	// tahap order: ServiceRequest lab & rad; obat belum mapping KFA -> peringatan; MedicationRequest belum
+	res := c.Sync(ctx, d, r.NoRawat)
+	if res.Err() != nil {
+		t.Fatal(res.Errors)
+	}
+	if m.Count("ServiceRequest") != 2 || m.Count("Medication") != 0 || len(res.Warnings) != 2 {
+		t.Fatalf("sr %d med %d warn %v", m.Count("ServiceRequest"), m.Count("Medication"), res.Warnings)
+	}
+	// mapping KFA (kode contoh untuk server tiruan) hanya untuk Amlodipine
+	d.Exec("INSERT INTO satu_sehat_mapping_obat (kode_brng,obat_code,obat_system,obat_display,form_code,form_system,form_display,denominator_code,denominator_system,route_code,route_system,route_display) VALUES ('B000006','93000001','http://sys-ids.kemkes.go.id/kfa','Amlodipine 5 mg Tablet','BS066','http://terminology.kemkes.go.id/CodeSystem/medication-form','Tablet','TAB','http://terminology.hl7.org/CodeSystem/v3-orderableDrugForm','O','http://www.whocc.no/atc','Oral')")
+	must(t, d, func(x *sql.Tx) error { return core.ValidasiResep(ctx, x, resep, "apt") })
+	must(t, d, func(x *sql.Tx) error { return core.SerahkanResep(ctx, x, resep) })
+	must(t, d, func(x *sql.Tx) error {
+		return core.SimpanHasilLab(ctx, x, lab, "P003", "D0000005", map[int]string{6: "245"})
+	})
+	must(t, d, func(x *sql.Tx) error {
+		return core.PeriksaRadiologi(ctx, x, rad, "P006", "D0000006", map[string]core.Paparan{"RAD001": {Proyeksi: "PA"}})
+	})
+	must(t, d, func(x *sql.Tx) error { return core.SimpanExpertise(ctx, x, rad, "Cor dan pulmo dalam batas normal.") })
+
+	res = c.Sync(ctx, d, r.NoRawat)
+	if res.Err() != nil {
+		t.Fatal(res.Errors)
+	}
+	// depo belum mapping -> MedicationDispense dilewati
+	if m.Count("Medication") != 1 || m.Count("MedicationRequest") != 1 || m.Count("MedicationDispense") != 0 {
+		t.Fatalf("obat: %d %d %d %v", m.Count("Medication"), m.Count("MedicationRequest"), m.Count("MedicationDispense"), res.Warnings)
+	}
+	if !strings.Contains(strings.Join(res.Warnings, ";"), "depo") {
+		t.Fatalf("peringatan depo: %v", res.Warnings)
+	}
+	if m.Count("Specimen") != 1 || m.Count("DiagnosticReport") != 2 {
+		t.Fatalf("lab/rad: spec %d dr %d", m.Count("Specimen"), m.Count("DiagnosticReport"))
+	}
+	mr := m.Get("MedicationRequest", q(t, d, "SELECT id_medicationrequest FROM satu_sehat_medicationrequest"))
+	di := mr["dosageInstruction"].([]any)[0].(map[string]any)
+	if di["timing"].(map[string]any)["repeat"].(map[string]any)["frequency"].(float64) != 1 {
+		t.Fatalf("dosis: %v", di)
+	}
+	ob := m.Get("Observation", q(t, d, "SELECT id_observation FROM satu_sehat_observation_lab"))
+	if ob["valueQuantity"].(map[string]any)["value"].(float64) != 245 || ob["category"].([]any)[0].(map[string]any)["coding"].([]any)[0].(map[string]any)["code"] != "laboratory" {
+		t.Fatalf("observation lab: %v", ob)
+	}
+	dr := m.Get("DiagnosticReport", q(t, d, "SELECT id_diagnosticreport FROM satu_sehat_diagnosticreport_radiologi"))
+	if !strings.Contains(dr["conclusion"].(string), "batas normal") {
+		t.Fatal("expertise tidak terkirim")
+	}
+	if _, err := c.CreateLocation(ctx, d, "depo", "AP"); err != nil {
+		t.Fatal(err)
+	}
+	n := m.Count("ServiceRequest")
+	res = c.Sync(ctx, d, r.NoRawat)
+	if res.Err() != nil || m.Count("MedicationDispense") != 1 || m.Count("ServiceRequest") != n || m.Count("Medication") != 1 {
+		t.Fatalf("dispense/idempoten: %v md %d", res.Errors, m.Count("MedicationDispense"))
+	}
+	md := m.Get("MedicationDispense", q(t, d, "SELECT id_medicationdispanse FROM satu_sehat_medicationdispense"))
+	if md["authorizingPrescription"].([]any)[0].(map[string]any)["reference"] != "MedicationRequest/"+mr["id"].(string) {
+		t.Fatal("dispense tidak merujuk resep")
+	}
+}
+
+func TestParseAturan(t *testing.T) {
+	for in, want := range map[string][2]float64{"3x1": {3, 1}, "2 x 1/2 tablet": {2, 0.5}, "1 X 2": {1, 2}, "sehari 3 x 1,5": {3, 1.5}} {
+		f, d, ok := satusehat.ParseAturan(in)
+		if !ok || float64(f) != want[0] || d != want[1] {
+			t.Errorf("%q -> %d %g %v", in, f, d, ok)
+		}
+	}
+	if _, _, ok := satusehat.ParseAturan("bila perlu"); ok {
+		t.Error("teks bebas tidak boleh terbaca")
+	}
 }

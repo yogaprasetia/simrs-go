@@ -322,6 +322,9 @@ func (m *Mock) validate(rt string, r map[string]any, put bool) (string, string, 
 			return "invalid", "subject/encounter tidak valid", "encounter"
 		}
 	case "Observation":
+		if str(r, "category", "coding", "code") == "laboratory" {
+			return m.validateLabObs(r)
+		}
 		if str(r, "status") != "final" || str(r, "category", "coding", "code") != "vital-signs" {
 			return "invalid", "status final & category vital-signs wajib", "category"
 		}
@@ -355,6 +358,155 @@ func (m *Mock) validate(rt string, r map[string]any, put bool) (string, string, 
 		} else {
 			return "code-invalid", "kode LOINC tanda vital tidak dikenal: " + code, "code"
 		}
+	case "Medication", "MedicationRequest", "MedicationDispense", "ServiceRequest", "Specimen", "DiagnosticReport":
+		return m.validate2(rt, r)
+	default:
+		return "not-supported", "resource " + rt + " tidak didukung server tiruan", "resourceType"
+	}
+	return "", "", ""
+}
+
+func isKFA(code string) bool {
+	return len(code) >= 8 && strings.Trim(code, "0123456789") == ""
+}
+
+func (m *Mock) basic(r map[string]any, encKey string) (string, string, string) {
+	if !m.refOK(str(r, "subject", "reference"), "Patient") {
+		return "invalid", "subject harus Patient IHS yang valid", "subject"
+	}
+	if encKey != "" && !m.refOK(str(r, encKey, "reference"), "Encounter") {
+		return "invalid", encKey + " harus Encounter yang ada", encKey
+	}
+	return "", "", ""
+}
+
+func (m *Mock) validateLabObs(r map[string]any) (string, string, string) {
+	if str(r, "status") != "final" {
+		return "invalid", "status harus final", "status"
+	}
+	if c, msg, e := m.basic(r, "encounter"); c != "" {
+		return c, msg, e
+	}
+	if str(r, "code", "coding", "system") != SysLOINC || str(r, "code", "coding", "code") == "" {
+		return "code-invalid", "code pemeriksaan lab harus LOINC", "code"
+	}
+	if !m.refOK(str(r, "specimen", "reference"), "Specimen") {
+		return "invalid", "specimen harus Specimen yang ada", "specimen"
+	}
+	if !m.refOK(str(r, "basedOn", "reference"), "ServiceRequest") {
+		return "invalid", "basedOn harus ServiceRequest", "basedOn"
+	}
+	if !validDT(str(r, "effectiveDateTime")) || !validDT(str(r, "issued")) {
+		return "invalid", "effectiveDateTime/issued tidak valid", "issued"
+	}
+	if vq, ok := r["valueQuantity"].(map[string]any); ok {
+		if _, ok := vq["value"].(float64); !ok || str(vq, "system") != SysUCUM || str(vq, "code") == "" || strings.Contains(str(vq, "code"), "^") {
+			return "invalid", "valueQuantity harus angka dengan kode UCUM", "valueQuantity"
+		}
+	} else if str(r, "valueString") == "" {
+		return "required", "Observation lab wajib valueQuantity atau valueString", "value[x]"
+	}
+	return "", "", ""
+}
+
+func (m *Mock) validate2(rt string, r map[string]any) (string, string, string) {
+	switch rt {
+	case "Medication":
+		if str(r, "code", "coding", "system") != SysKFA || !isKFA(str(r, "code", "coding", "code")) {
+			return "code-invalid", "code Medication harus kode KFA", "code"
+		}
+		if !m.refOK(str(r, "manufacturer", "reference"), "Organization") {
+			return "invalid", "manufacturer harus Organization RS", "manufacturer"
+		}
+		if str(r, "extension", "valueCodeableConcept", "coding", "code") == "" {
+			return "required", "extension medicationType wajib", "extension"
+		}
+	case "MedicationRequest":
+		if str(r, "status") != "completed" && str(r, "status") != "active" || str(r, "intent") != "order" {
+			return "invalid", "status/intent MedicationRequest tidak valid", "status"
+		}
+		if c, msg, e := m.basic(r, "encounter"); c != "" {
+			return c, msg, e
+		}
+		if !m.refOK(str(r, "medicationReference", "reference"), "Medication") {
+			return "invalid", "medicationReference harus Medication yang ada", "medicationReference"
+		}
+		if !m.refOK(str(r, "requester", "reference"), "Practitioner") {
+			return "invalid", "requester harus Practitioner", "requester"
+		}
+		if !validDT(str(r, "authoredOn")) {
+			return "invalid", "authoredOn tidak valid", "authoredOn"
+		}
+		if !strings.HasPrefix(identValue(r), "http://sys-ids.kemkes.go.id/prescription/"+m.OrgID+"|") {
+			return "invalid", "identifier prescription/{org} wajib", "identifier"
+		}
+	case "MedicationDispense":
+		if c, msg, e := m.basic(r, "context"); c != "" {
+			return c, msg, e
+		}
+		if !m.refOK(str(r, "medicationReference", "reference"), "Medication") {
+			return "invalid", "medicationReference harus Medication yang ada", "medicationReference"
+		}
+		if !m.refOK(str(r, "authorizingPrescription", "reference"), "MedicationRequest") {
+			return "invalid", "authorizingPrescription harus MedicationRequest", "authorizingPrescription"
+		}
+		if !m.refOK(str(r, "location", "reference"), "Location") {
+			return "invalid", "location depo farmasi tidak terdaftar", "location"
+		}
+		if !validDT(str(r, "whenPrepared")) || !validDT(str(r, "whenHandedOver")) {
+			return "invalid", "whenPrepared/whenHandedOver tidak valid", "whenHandedOver"
+		}
+	case "ServiceRequest":
+		if str(r, "intent") != "original-order" && str(r, "intent") != "order" {
+			return "invalid", "intent ServiceRequest tidak valid", "intent"
+		}
+		if c, msg, e := m.basic(r, "encounter"); c != "" {
+			return c, msg, e
+		}
+		if str(r, "code", "coding", "system") != SysLOINC || str(r, "code", "coding", "code") == "" {
+			return "code-invalid", "code ServiceRequest harus LOINC", "code"
+		}
+		if str(r, "category", "coding", "system") != SysSNOMED {
+			return "code-invalid", "category harus SNOMED-CT", "category"
+		}
+		if !m.refOK(str(r, "requester", "reference"), "Practitioner") {
+			return "invalid", "requester harus Practitioner", "requester"
+		}
+	case "Specimen":
+		if c, msg, e := m.basic(r, ""); c != "" {
+			return c, msg, e
+		}
+		if str(r, "type", "coding", "system") != SysSNOMED || str(r, "type", "coding", "code") == "" {
+			return "code-invalid", "type spesimen harus SNOMED-CT", "type"
+		}
+		if !m.refOK(str(r, "request", "reference"), "ServiceRequest") {
+			return "invalid", "request harus ServiceRequest", "request"
+		}
+		if !validDT(str(r, "collection", "collectedDateTime")) {
+			return "invalid", "collection.collectedDateTime tidak valid", "collection"
+		}
+	case "DiagnosticReport":
+		if str(r, "status") != "final" {
+			return "invalid", "status harus final", "status"
+		}
+		if c, msg, e := m.basic(r, "encounter"); c != "" {
+			return c, msg, e
+		}
+		cat := str(r, "category", "coding", "code")
+		if str(r, "category", "coding", "system") != SysV2_0074 || (cat != "LAB" && cat != "RAD") {
+			return "code-invalid", "category harus v2-0074 LAB/RAD", "category"
+		}
+		if !m.refOK(str(r, "basedOn", "reference"), "ServiceRequest") {
+			return "invalid", "basedOn harus ServiceRequest", "basedOn"
+		}
+		if cat == "LAB" && !m.refOK(str(r, "result", "reference"), "Observation") {
+			return "invalid", "result harus Observation", "result"
+		}
+		if cat == "RAD" && strings.TrimSpace(str(r, "conclusion")) == "" {
+			return "required", "conclusion (expertise) wajib untuk radiologi", "conclusion"
+		}
+	default:
+		return "not-supported", "resource " + rt + " tidak didukung server tiruan", "resourceType"
 	}
 	return "", "", ""
 }

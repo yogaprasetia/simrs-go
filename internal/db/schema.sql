@@ -1123,3 +1123,121 @@ CREATE TABLE IF NOT EXISTS detail_beri_diet (
   PRIMARY KEY (no_rawat, kd_kamar, tanggal, waktu, kd_diet),
   KEY idx_tgl (tanggal, waktu)
 );
+
+
+-- ===================================================== SATUSEHAT tahap 2 (obat, lab, radiologi)
+CREATE TABLE IF NOT EXISTS satu_sehat_mapping_obat (
+  kode_brng varchar(15) NOT NULL PRIMARY KEY,
+  obat_code varchar(15) DEFAULT NULL,
+  obat_system varchar(100) DEFAULT NULL,
+  obat_display varchar(80) DEFAULT NULL,
+  form_code varchar(30) DEFAULT NULL,
+  form_system varchar(100) DEFAULT NULL,
+  form_display varchar(80) DEFAULT NULL,
+  numerator_code varchar(15) DEFAULT NULL,
+  numerator_system varchar(80) DEFAULT NULL,
+  denominator_code varchar(15) DEFAULT NULL,
+  denominator_system varchar(80) DEFAULT NULL,
+  route_code varchar(30) DEFAULT NULL,
+  route_system varchar(100) DEFAULT NULL,
+  route_display varchar(80) DEFAULT NULL
+);
+
+CREATE TABLE IF NOT EXISTS satu_sehat_mapping_lab (
+  id_template int NOT NULL PRIMARY KEY,
+  code varchar(15) DEFAULT NULL,
+  system varchar(100) NOT NULL,
+  display varchar(80) DEFAULT NULL,
+  sampel_code varchar(15) NOT NULL,
+  sampel_system varchar(100) NOT NULL,
+  sampel_display varchar(80) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS satu_sehat_mapping_radiologi (
+  kd_jenis_prw varchar(15) NOT NULL PRIMARY KEY,
+  code varchar(15) DEFAULT NULL,
+  system varchar(100) NOT NULL,
+  display varchar(80) DEFAULT NULL,
+  sampel_code varchar(15) NOT NULL DEFAULT '',
+  sampel_system varchar(100) NOT NULL DEFAULT '',
+  sampel_display varchar(80) NOT NULL DEFAULT ''
+);
+
+CREATE TABLE IF NOT EXISTS satu_sehat_mapping_lokasi_depo_farmasi (
+  kd_bangsal char(5) NOT NULL PRIMARY KEY,
+  id_organisasi_satusehat varchar(40) DEFAULT NULL,
+  id_lokasi_satusehat varchar(40) DEFAULT NULL,
+  longitude varchar(30) NOT NULL DEFAULT '',
+  latitude varchar(30) NOT NULL DEFAULT '',
+  altittude varchar(30) NOT NULL DEFAULT '',
+  UNIQUE KEY uk_lokasi (id_lokasi_satusehat)
+);
+
+CREATE TABLE IF NOT EXISTS satu_sehat_medication (
+  kode_brng varchar(15) NOT NULL PRIMARY KEY,
+  id_medication varchar(40) DEFAULT NULL
+);
+
+CREATE TABLE IF NOT EXISTS satu_sehat_medicationrequest (
+  no_resep varchar(14) NOT NULL,
+  kode_brng varchar(15) NOT NULL,
+  id_medicationrequest varchar(40) DEFAULT NULL,
+  PRIMARY KEY (no_resep, kode_brng)
+);
+
+CREATE TABLE IF NOT EXISTS satu_sehat_medicationdispense (
+  no_rawat varchar(17) NOT NULL,
+  tgl_perawatan date NOT NULL,
+  jam time NOT NULL,
+  kode_brng varchar(15) NOT NULL,
+  no_batch varchar(20) NOT NULL,
+  no_faktur varchar(20) NOT NULL,
+  id_medicationdispanse varchar(40) DEFAULT NULL,
+  PRIMARY KEY (no_rawat, tgl_perawatan, jam, kode_brng, no_batch, no_faktur)
+);
+
+CREATE TABLE IF NOT EXISTS satu_sehat_servicerequest_lab (
+  noorder varchar(15) NOT NULL,
+  kd_jenis_prw varchar(15) NOT NULL,
+  id_template int NOT NULL,
+  id_servicerequest varchar(40) DEFAULT NULL,
+  PRIMARY KEY (noorder, kd_jenis_prw, id_template)
+);
+
+CREATE TABLE IF NOT EXISTS satu_sehat_specimen_lab (
+  noorder varchar(15) NOT NULL,
+  kd_jenis_prw varchar(15) NOT NULL,
+  id_template int NOT NULL,
+  id_specimen varchar(40) DEFAULT NULL,
+  PRIMARY KEY (noorder, kd_jenis_prw, id_template)
+);
+
+CREATE TABLE IF NOT EXISTS satu_sehat_observation_lab (
+  noorder varchar(15) NOT NULL,
+  kd_jenis_prw varchar(15) NOT NULL,
+  id_template int NOT NULL,
+  id_observation varchar(40) DEFAULT NULL,
+  PRIMARY KEY (noorder, kd_jenis_prw, id_template)
+);
+
+CREATE TABLE IF NOT EXISTS satu_sehat_diagnosticreport_lab (
+  noorder varchar(15) NOT NULL,
+  kd_jenis_prw varchar(15) NOT NULL,
+  id_template int NOT NULL,
+  id_diagnosticreport varchar(40) DEFAULT NULL,
+  PRIMARY KEY (noorder, kd_jenis_prw, id_template)
+);
+
+CREATE TABLE IF NOT EXISTS satu_sehat_servicerequest_radiologi (
+  noorder varchar(15) NOT NULL,
+  kd_jenis_prw varchar(15) NOT NULL,
+  id_servicerequest varchar(40) DEFAULT NULL,
+  PRIMARY KEY (noorder, kd_jenis_prw)
+);
+
+CREATE TABLE IF NOT EXISTS satu_sehat_diagnosticreport_radiologi (
+  noorder varchar(15) NOT NULL,
+  kd_jenis_prw varchar(15) NOT NULL,
+  id_diagnosticreport varchar(40) DEFAULT NULL,
+  PRIMARY KEY (noorder, kd_jenis_prw)
+);

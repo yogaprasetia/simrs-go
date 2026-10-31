@@ -34,7 +34,7 @@ func (s *Server) giziPage(w http.ResponseWriter, r *http.Request) {
 	d := map[string]any{"Title": "Gizi", "Tgl": tgl, "Tab": tab, "Waktu": waktu, "Diet": s.rows(ctx, "SELECT * FROM diet ORDER BY kd_diet")}
 	// pasien yang dirawat pada tanggal itu (baris kamar terbaru per no_rawat)
 	pas := s.rows(ctx, `SELECT k.no_rawat, k.kd_kamar, b.nm_bangsal, m.kelas, p.nm_pasien, p.no_rkm_medis, p.jk, CONCAT(r.umurdaftar,' ',r.sttsumur) umur, k.diagnosa_awal,
-		(SELECT GROUP_CONCAT(DISTINCT e.alergi SEPARATOR ', ') FROM pemeriksaan_ranap e JOIN reg_periksa rr ON rr.no_rawat=e.no_rawat WHERE rr.no_rkm_medis=p.no_rkm_medis AND e.alergi<>'') alergi
+		(SELECT GROUP_CONCAT(DISTINCT a SEPARATOR ', ') FROM (SELECT e.alergi a, e.no_rawat FROM pemeriksaan_ranap e UNION ALL SELECT e.alergi, e.no_rawat FROM pemeriksaan_ralan e) e JOIN reg_periksa rr ON rr.no_rawat=e.no_rawat WHERE rr.no_rkm_medis=p.no_rkm_medis AND e.a<>'' AND e.a<>'-') alergi
 		FROM kamar_inap k JOIN kamar m ON m.kd_kamar=k.kd_kamar JOIN bangsal b ON b.kd_bangsal=m.kd_bangsal JOIN reg_periksa r ON r.no_rawat=k.no_rawat JOIN pasien p ON p.no_rkm_medis=r.no_rkm_medis
 		WHERE k.tgl_masuk<=? AND (k.stts_pulang='-' OR k.tgl_keluar>=?)
 		AND NOT EXISTS (SELECT 1 FROM kamar_inap k2 WHERE k2.no_rawat=k.no_rawat AND k2.tgl_masuk<=? AND (k2.stts_pulang='-' OR k2.tgl_keluar>=?) AND (k2.tgl_masuk>k.tgl_masuk OR (k2.tgl_masuk=k.tgl_masuk AND k2.jam_masuk>k.jam_masuk)))
