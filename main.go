@@ -101,6 +101,23 @@ func main() {
 			log.Println("user admin dibuat dari ADMIN_PASSWORD")
 		}
 	}
+	var demo []web.DemoUser
+	if pw := os.Getenv("DEMO_PASSWORD"); pw != "" {
+		for _, x := range [][3]string{{"demo-admin", "Administrator", "admin"}, {"demo-daftar", "Petugas Pendaftaran", "pendaftaran,bpjs"},
+			{"demo-dokter", "dr. Sari Wulandari, Sp.PD", "dokter"}, {"demo-perawat", "Perawat", "perawat"}, {"demo-farmasi", "Apoteker / Gudang", "farmasi"},
+			{"demo-lab", "Analis Lab", "lab"}, {"demo-rad", "Radiografer", "radiologi"}, {"demo-ok", "Perawat OK / VK", "ok"}, {"demo-gizi", "Ahli Gizi", "gizi"},
+			{"demo-kasir", "Kasir", "kasir"}, {"demo-keu", "Bagian Keuangan", "keuangan"}, {"demo-mgr", "Direksi / Manajemen", "manajemen"}} {
+			kd := ""
+			if x[0] == "demo-dokter" {
+				kd = "D0000002"
+			}
+			if err := db.UpsertUser(ctx, d, x[0], x[1], pw, x[2], kd); err != nil {
+				log.Fatal(err)
+			}
+			demo = append(demo, web.DemoUser{ID: x[0], Nama: x[1], Peran: x[2], Password: pw})
+		}
+		log.Printf("mode demo: %d akun demo aktif", len(demo))
+	}
 	if *migrate {
 		return
 	}
@@ -141,6 +158,7 @@ func main() {
 	}
 	srv.Prefix = strings.TrimRight(env("BASE_PATH", ""), "/")
 	srv.UploadDir = env("UPLOAD_DIR", "uploads")
+	srv.Demo = demo
 
 	ss := satusehat.Config{Mode: env("SATUSEHAT_MODE", "off"), ClientID: env("SATUSEHAT_CLIENT_ID", ""), ClientSecret: env("SATUSEHAT_CLIENT_SECRET", ""), OrgID: env("SATUSEHAT_ORG_ID", "")}
 	switch ss.Mode {

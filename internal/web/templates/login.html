@@ -4,4 +4,6 @@
 <input type="hidden" name="next" value="{{.Next}}">
 <label>User<input name="user" value="{{.LoginUser}}" autofocus required autocomplete="username"></label>
 <label>Password<input type="password" name="password" required autocomplete="current-password"></label>
-<button class="btn primary wide">Masuk</button></form></div>{{end}}
+<button class="btn primary wide">Masuk</button></form>
+{{if .Demo}}<div class="card demo"><h3>Server demo — pilih peran</h3><p class="muted small">Data di server ini fiktif dan bisa direset sewaktu-waktu.</p>
+{{range .Demo}}<form method="post" class="demorow"><input type="hidden" name="user" value="{{.ID}}"><input type="hidden" name="password" value="{{.Password}}"><input type="hidden" name="next" value="{{$.Next}}"><button class="btn">{{.Nama}}</button><span class="muted small">{{.Peran}}</span></form>{{end}}</div>{{end}}</div>{{end}}

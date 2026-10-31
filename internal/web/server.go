@@ -44,7 +44,11 @@ type Server struct {
 	Instansi  string
 	UploadDir string
 	SS        *satusehat.Client
+	// Demo: bila diisi, halaman login menampilkan akun demo (tombol masuk sekali klik). Hanya untuk server demo.
+	Demo []DemoUser
 }
+
+type DemoUser struct{ ID, Nama, Peran, Password string }
 
 type User struct {
 	ID, Nama, KdDokter string
@@ -203,7 +207,7 @@ func (s *Server) guard(roles []string, h http.HandlerFunc) http.HandlerFunc {
 
 func (s *Server) loginPage(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodGet {
-		s.render(w, r, "login", map[string]any{"Next": r.URL.Query().Get("next")}, 200)
+		s.render(w, r, "login", map[string]any{"Next": r.URL.Query().Get("next"), "Demo": s.Demo}, 200)
 		return
 	}
 	id := strings.TrimSpace(r.FormValue("user"))
