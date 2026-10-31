@@ -1,0 +1,10 @@
+{{define "content"}}{{$b := .B}}{{$r := $b.Reg}}<h1>Billing {{if $b.Ranap}}Rawat Inap{{else}}Rawat Jalan{{end}}</h1>
+<div class="card info">{{$r.NoRawat}} · {{$r.NoRM}} <b>{{$r.Nama}}</b> · {{$r.NmPoli}} · {{$r.NmDokter}} · <b>{{$r.PngJawab}}</b>{{if .SEP}} · SEP {{.SEP}}{{end}}</div>
+{{if ne .Pending "0"}}<div class="alert">Masih ada {{.Pending}} resep/lab yang belum selesai — pembayaran belum bisa disimpan.</div>{{end}}
+<table class="list"><tr><th>Kelompok</th><th>Uraian</th><th class="r">Biaya</th><th class="r">Jml</th><th class="r">Total</th></tr>
+{{range $b.Items}}<tr><td>{{.Status}}</td><td>{{.Nama}}</td><td class="r">{{rp .Biaya}}</td><td class="r">{{num .Jml}}</td><td class="r">{{rp .Total}}</td></tr>{{end}}
+<tr class="total"><th colspan="4">TOTAL TAGIHAN</th><th class="r">{{rp $b.Total}}</th></tr></table>
+{{if eq2 $r.KdPJ "BPJ"}}<p class="muted">Pasien BPJS: tagihan ini menjadi dasar klaim INA-CBG (biaya riil RS), bukan dibayar pasien.</p>{{end}}
+<div class="right">{{if $b.SudahBayar}}<span class="tag big">LUNAS · {{.Nota}}</span> <a class="btn" href="{{.P}}/kasir/nota?no={{$r.NoRawat}}" target="_blank">Cetak nota</a>
+{{if has .User "admin"}}<form method="post" action="{{.P}}/kasir/batal" class="inline" onsubmit="return confirm('Batalkan pembayaran dan buka kunci transaksi?')">{{template "csrf" .}}<input type="hidden" name="no_rawat" value="{{$r.NoRawat}}"><button class="btn danger">Batal bayar</button></form>{{end}}
+{{else}}<a class="btn" href="{{.P}}/rawat?no={{$r.NoRawat}}&tab=tindakan">Tambah biaya</a> <form method="post" action="{{.P}}/kasir/bayar" class="inline" onsubmit="return confirm('Simpan pembayaran {{rp $b.Total}}? Transaksi akan dikunci.')">{{template "csrf" .}}<input type="hidden" name="no_rawat" value="{{$r.NoRawat}}"><button class="btn primary">Simpan pembayaran</button></form>{{end}}</div>{{end}}

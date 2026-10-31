@@ -1,0 +1,26 @@
+{{define "content"}}<h1>Registrasi Pasien</h1>
+<div class="card form">
+<form method="post" action="{{.P}}/registrasi" id="regform">{{template "csrf" .}}
+<div class="g3">
+<label class="span2">Pasien (ketik No. RM / NIK / No. BPJS / nama)
+ <input id="caripasien" data-ac="pasien" placeholder="min. 2 karakter" value="{{with .Pasien}}{{.no_rkm_medis}} — {{.nm_pasien}}{{end}}" autocomplete="off">
+ <input type="hidden" name="no_rkm_medis" id="no_rkm_medis" value="{{with .Pasien}}{{.no_rkm_medis}}{{end}}"></label>
+<div class="pinfo" id="pinfo">{{with .Pasien}}{{.jk}} · {{tgl .tgl_lahir}} · {{.alamat}}{{if .no_peserta}} · BPJS {{.no_peserta}}{{end}}{{else}}<a href="{{$.P}}/pasien/form?next=registrasi">+ Pasien baru</a>{{end}}</div>
+<label>Poliklinik / unit *<select name="kd_poli" id="kd_poli" required><option value="">— pilih —</option>{{range .Poli}}<option value="{{.kd_poli}}">{{.nm_poli}} ({{rp .registrasi}})</option>{{end}}</select></label>
+<label>Dokter *<select name="kd_dokter" id="kd_dokter" required><option value="">— pilih poli dulu —</option></select></label>
+<label>Cara bayar *<select name="kd_pj" id="kd_pj">{{range .Penjab}}<option value="{{.kd_pj}}" {{if eq2 .kd_pj "A09"}}selected{{end}}>{{.png_jawab}}</option>{{end}}</select></label>
+<label>Penanggung jawab<input name="p_jawab" value="{{with .Pasien}}{{.namakeluarga}}{{end}}"></label>
+<label>Hubungan<input name="hubunganpj" value="{{with .Pasien}}{{.keluarga}}{{end}}"></label>
+<label>Alamat PJ<input name="almt_pj" value="{{with .Pasien}}{{.alamat}}{{end}}"></label>
+</div>
+<div class="right"><button class="btn primary">Daftarkan</button></div>
+</form></div>
+{{with .Pasien}}<script>window.PJ_DEFAULT="{{.kd_pj}}";</script>{{end}}
+<h2>Daftar registrasi <form class="inline"><input type="date" name="tgl" value="{{.Tgl}}" onchange="this.form.submit()"></form></h2>
+<table class="list"><tr><th>No. rawat</th><th>Antre</th><th>Jam</th><th>Pasien</th><th>Poli / dokter</th><th>Bayar</th><th>Status</th><th>Biaya reg</th><th></th></tr>
+{{range .List}}<tr class="{{if eq2 .stts "Batal"}}batal{{end}}"><td><a href="{{$.P}}/rawat?no={{.no_rawat}}">{{.no_rawat}}</a></td><td><b>{{.no_reg}}</b></td><td>{{.jam_reg}}</td><td>{{.no_rkm_medis}} {{.nm_pasien}} <small class="tag">{{.stts_daftar}}</small></td><td>{{.nm_poli}}<br><small>{{.nm_dokter}}</small></td>
+<td>{{.png_jawab}}{{if .no_sep}}<br><small>SEP {{.no_sep}}</small>{{end}}</td><td><span class="st st-{{.stts}}">{{.stts}}</span> {{if eq2 .status_lanjut "Ranap"}}<span class="tag">Ranap</span>{{end}}</td><td class="r">{{rp .biaya_reg}}</td>
+<td class="act"><a href="{{$.P}}/registrasi/bukti?no={{.no_rawat}}" target="_blank">Cetak</a>
+{{if and (eq2 .kd_pj "BPJ") (not .no_sep)}} · <a href="{{$.P}}/bpjs/sep?no={{.no_rawat}}">SEP</a>{{end}}
+{{if eq2 .stts "Belum"}} · <form method="post" action="{{$.P}}/registrasi/batal" class="inline" onsubmit="return confirm('Batalkan registrasi {{.no_rawat}}?')">{{template "csrf" $}}<input type="hidden" name="no_rawat" value="{{.no_rawat}}"><button class="link danger">Batal</button></form>{{end}}</td></tr>
+{{else}}<tr><td colspan="9" class="muted">Belum ada registrasi</td></tr>{{end}}</table>{{end}}

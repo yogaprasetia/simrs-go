@@ -1,0 +1,22 @@
+{{define "layout"}}<!doctype html>
+<html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{{.Title}} · {{.Instansi}}</title>
+<link rel="stylesheet" href="{{.P}}/static/app.css">
+</head>
+<body class="{{if .Print}}print{{end}}">
+{{if and .User (not .Print)}}
+<aside class="side">
+ <div class="brand">SIMRS<small>{{.Instansi}}</small></div>
+ <nav>{{range .Menu}}<a href="{{$.P}}{{.Href}}" class="{{if eq2 $.Path .Href}}on{{end}}"><span>{{.Icon}}</span>{{.Label}}</a>{{end}}</nav>
+ <div class="me">{{.User.Nama}}<small>{{.User.ID}}{{if .User.KdDokter}} · dokter{{end}}</small>
+ <form method="post" action="{{.P}}/logout"><input type="hidden" name="_csrf" value="{{.CSRF}}"><button class="link">Keluar</button></form></div>
+</aside>{{end}}
+<main class="{{if and .User (not .Print)}}withside{{end}}">
+ {{if not .Print}}{{if .Msg}}<div class="flash ok">{{.Msg}}</div>{{end}}{{if .Err}}<div class="flash err">{{.Err}}</div>{{end}}{{end}}
+ {{template "content" .}}
+</main>
+<script>window.P="{{.P}}";</script>
+<script src="{{.P}}/static/app.js"></script>
+</body></html>{{end}}
+{{define "csrf"}}<input type="hidden" name="_csrf" value="{{.CSRF}}">{{end}}
+{{define "kop"}}<div class="kop"><b>{{.Instansi}}</b></div>{{end}}

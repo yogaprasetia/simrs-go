@@ -1,0 +1,8 @@
+{{define "content"}}{{$o := .O}}<h1>Hasil Lab {{$o.noorder}}</h1>
+<div class="card info">{{$o.no_rkm_medis}} <b>{{$o.nm_pasien}}</b> ({{$o.jk}}, {{$o.umur}}) · {{$o.nm_poli}} · perujuk {{$o.nm_dokter}} · {{$o.diagnosa_klinis}}</div>
+<form method="post" action="{{.P}}/lab/hasil" class="card form">{{template "csrf" .}}<input type="hidden" name="noorder" value="{{$o.noorder}}">
+<table class="list"><tr><th>Pemeriksaan</th><th>Hasil</th><th>Satuan</th><th>Nilai rujukan ({{$o.jk}})</th><th>Flag</th></tr>
+{{$last := ""}}{{range .Items}}{{if ne $last .nm_perawatan}}<tr class="grp"><td colspan="5">{{.nm_perawatan}}</td></tr>{{end}}{{$last = .nm_perawatan}}
+<tr><td>{{.Pemeriksaan}}</td><td>{{if $o.tgl_hasil}}<b>{{.nilai}}</b>{{else}}<input name="t_{{.id_template}}" data-ruj="{{.rujukan}}" class="hasil">{{end}}</td><td>{{.satuan}}</td><td>{{.rujukan}}</td><td class="flag">{{.flag}}</td></tr>{{end}}</table>
+{{if not $o.tgl_hasil}}<label>Dokter penanggung jawab lab<select name="kd_dokter">{{range .Dokter}}<option value="{{.kd_dokter}}">{{.nm_dokter}}</option>{{end}}</select></label>
+<div class="right"><button class="btn primary">Simpan & validasi hasil</button></div>{{else}}<div class="right"><a class="btn" href="{{.P}}/lab/cetak?no={{$o.noorder}}" target="_blank">Cetak hasil</a></div>{{end}}</form>{{end}}

@@ -1,0 +1,7 @@
+{{define "content"}}<div class="login"><form method="post" class="card">
+<h1>SIMRS</h1><p class="muted">{{.Instansi}}</p>
+{{if .Err}}<div class="flash err">{{.Err}}</div>{{end}}
+<input type="hidden" name="next" value="{{.Next}}">
+<label>User<input name="user" value="{{.LoginUser}}" autofocus required autocomplete="username"></label>
+<label>Password<input type="password" name="password" required autocomplete="current-password"></label>
+<button class="btn primary wide">Masuk</button></form></div>{{end}}

@@ -1,0 +1,5 @@
+{{define "content"}}<h1>Laboratorium</h1>
+<div class="tabs"><a href="?" class="{{if not .St}}on{{end}}">Menunggu hasil</a><a href="?st=selesai" class="{{if .St}}on{{end}}">Selesai (7 hari)</a></div>
+<table class="list"><tr><th>No. order</th><th>Waktu</th><th>Pasien</th><th>Pemeriksaan</th><th>Perujuk</th><th>Diagnosa klinis</th><th></th></tr>
+{{range .List}}<tr><td>{{.noorder}}</td><td>{{tgl .tgl_permintaan}} {{.jam_permintaan}}</td><td>{{.no_rkm_medis}} <b>{{.nm_pasien}}</b><br><small>{{.no_rawat}} · {{.status}}</small></td><td>{{.isi}}</td><td>{{.nm_dokter}}</td><td>{{.diagnosa_klinis}}</td>
+<td class="act">{{if .tgl_hasil}}<a href="{{$.P}}/lab/cetak?no={{.noorder}}" target="_blank">Cetak</a>{{else}}<a class="btn primary" href="{{$.P}}/lab/hasil?no={{.noorder}}">Input hasil</a>{{end}}</td></tr>{{else}}<tr><td colspan="7" class="muted">Tidak ada order</td></tr>{{end}}</table>{{end}}

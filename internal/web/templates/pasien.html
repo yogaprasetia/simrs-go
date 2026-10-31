@@ -1,0 +1,6 @@
+{{define "content"}}<h1>Data Pasien {{if has .User "pendaftaran"}}<a class="btn primary" href="{{.P}}/pasien/form">+ Pasien baru</a>{{end}}</h1>
+<form class="bar"><input name="q" value="{{.Q}}" placeholder="No. RM / NIK / No. BPJS / nama / alamat" autofocus><button class="btn">Cari</button></form>
+<table class="list"><tr><th>No. RM</th><th>Nama</th><th>JK</th><th>Tgl lahir</th><th>Alamat</th><th>Cara bayar</th><th>No. BPJS</th><th></th></tr>
+{{range .List}}<tr><td>{{.no_rkm_medis}}</td><td><b>{{.nm_pasien}}</b><br><small class="muted">NIK {{.no_ktp}}</small></td><td>{{.jk}}</td><td>{{tgl .tgl_lahir}}</td><td>{{.alamat}}</td><td>{{.png_jawab}}</td><td>{{.no_peserta}}</td>
+<td class="act"><a href="{{$.P}}/pasien/riwayat?rm={{.no_rkm_medis}}">Riwayat</a>{{if has $.User "pendaftaran"}} · <a href="{{$.P}}/pasien/form?rm={{.no_rkm_medis}}">Ubah</a> · <a href="{{$.P}}/registrasi?rm={{.no_rkm_medis}}">Daftar</a>{{end}}</td></tr>
+{{else}}<tr><td colspan="8" class="muted">Tidak ada data</td></tr>{{end}}</table>{{end}}

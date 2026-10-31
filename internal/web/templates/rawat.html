@@ -1,0 +1,77 @@
+{{define "content"}}{{$r := .R}}{{$lock := .Locked}}
+<div class="phead"><div><h1>{{$r.Nama}} <small>RM {{$r.NoRM}}</small></h1>
+<div class="muted">{{$r.NoRawat}} · {{$r.JK}} · {{$r.Umur}} · {{$r.NmPoli}} · {{$r.NmDokter}} · {{$r.PngJawab}} · <b>{{$r.StatusLanjut}}</b>{{range .DPJP}} · DPJP {{.nm_dokter}}{{end}}</div>
+{{if .Alergi}}<div class="alert">⚠ Alergi: {{.Alergi}}</div>{{end}}</div>
+<div class="right">{{if $lock}}<span class="tag big">{{if eq2 $r.Stts "Batal"}}BATAL{{else}}SUDAH BAYAR — terkunci{{end}}</span>{{end}}
+{{if has .User "kasir"}}<a class="btn" href="{{.P}}/kasir/billing?no={{$r.NoRawat}}">Billing</a>{{end}}</div></div>
+<div class="tabs">{{range split "soap:SOAP / CPPT,diagnosa:Diagnosa & Prosedur,tindakan:Tindakan,resep:Resep,lab:Laboratorium,kamar:Kamar / Ranap,riwayat:Riwayat" ","}}{{$kv := split . ":"}}<a href="?no={{q $r.NoRawat}}&tab={{index $kv 0}}" class="{{if eq2 $.Tab (index $kv 0)}}on{{end}}">{{index $kv 1}}</a>{{end}}</div>
+
+{{if eq .Tab "soap"}}
+{{if and (not $lock) (has .User "dokter" "perawat")}}<form method="post" action="{{.P}}/rawat/soap" class="card form">{{template "csrf" .}}<input type="hidden" name="no_rawat" value="{{$r.NoRawat}}">
+<div class="g6"><label>Tensi<input name="tensi" placeholder="120/80"></label><label>Nadi<input name="nadi"></label><label>RR<input name="respirasi"></label><label>Suhu<input name="suhu_tubuh"></label><label>SpO2<input name="spo2"></label><label>GCS<input name="gcs" placeholder="E4V5M6"></label>
+<label>TB (cm)<input name="tinggi"></label><label>BB (kg)<input name="berat"></label><label>L. perut<input name="lingkar_perut"></label>
+<label>Kesadaran<select name="kesadaran">{{range split "Compos Mentis,Somnolence,Sopor,Coma,Alert,Confusion,Voice,Pain,Unresponsive,Apatis,Delirium" ","}}<option>{{.}}</option>{{end}}</select></label><label class="span2">Alergi<input name="alergi"></label></div>
+<div class="g2"><label>S — Subjektif (keluhan)<textarea name="keluhan" rows="3"></textarea></label><label>O — Objektif (pemeriksaan)<textarea name="pemeriksaan" rows="3"></textarea></label>
+<label>A — Asesmen<textarea name="penilaian" rows="2"></textarea></label><label>P — Plan / RTL<textarea name="rtl" rows="2"></textarea></label>
+<label>Instruksi<textarea name="instruksi" rows="2"></textarea></label><label>Evaluasi<textarea name="evaluasi" rows="2"></textarea></label></div>
+<div class="right"><button class="btn primary">Simpan pemeriksaan</button></div></form>{{end}}
+{{range .SOAP}}<div class="card soap"><div class="muted">{{tgl .tgl_perawatan}} {{.jam_rawat}} · {{.jenis}} · oleh {{.nip}}</div>
+<div class="vit">TD {{.tensi}} · N {{.nadi}} · RR {{.respirasi}} · S {{.suhu_tubuh}} · SpO2 {{.spo2}} · GCS {{.gcs}} · {{.kesadaran}} · TB {{.tinggi}} · BB {{.berat}}</div>
+<div class="g2"><div><b>S</b> {{nl .keluhan}}</div><div><b>O</b> {{nl .pemeriksaan}}</div><div><b>A</b> {{nl .penilaian}}</div><div><b>P</b> {{nl .rtl}}</div>{{if .instruksi}}<div><b>Instruksi</b> {{nl .instruksi}}</div>{{end}}{{if .evaluasi}}<div><b>Evaluasi</b> {{nl .evaluasi}}</div>{{end}}</div></div>
+{{else}}<p class="muted">Belum ada pemeriksaan.</p>{{end}}
+{{end}}
+
+{{if eq .Tab "diagnosa"}}
+{{if and (not $lock) (has .User "dokter")}}<div class="grid2">
+<form method="post" action="{{.P}}/rawat/diagnosa" class="card form">{{template "csrf" .}}<input type="hidden" name="no_rawat" value="{{$r.NoRawat}}"><label>Diagnosa ICD-10<input name="kd_penyakit" data-ac="penyakit" required autocomplete="off" placeholder="kode atau nama"></label><button class="btn primary">Tambah</button></form>
+<form method="post" action="{{.P}}/rawat/prosedur" class="card form">{{template "csrf" .}}<input type="hidden" name="no_rawat" value="{{$r.NoRawat}}"><label>Prosedur ICD-9-CM<input name="kode" data-ac="icd9" required autocomplete="off"></label><button class="btn primary">Tambah</button></form></div>{{end}}
+<table class="list"><tr><th>#</th><th>Kode</th><th>Diagnosa</th><th>Status</th><th>Kasus</th><th></th></tr>{{range .Diagnosa}}<tr><td>{{.prioritas}}{{if eq2 .prioritas "1"}} (utama){{end}}</td><td>{{.kd_penyakit}}</td><td>{{.nm_penyakit}}</td><td>{{.status}}</td><td>{{.status_penyakit}}</td>
+<td>{{if and (not $lock) (has $.User "dokter")}}<form method="post" action="{{$.P}}/rawat/diagnosa-hapus" class="inline">{{template "csrf" $}}<input type="hidden" name="no_rawat" value="{{$r.NoRawat}}"><input type="hidden" name="kd_penyakit" value="{{.kd_penyakit}}"><input type="hidden" name="status" value="{{.status}}"><button class="link danger">Hapus</button></form>{{end}}</td></tr>{{else}}<tr><td colspan="6" class="muted">Belum ada diagnosa</td></tr>{{end}}</table>
+<table class="list"><tr><th>#</th><th>ICD-9</th><th>Prosedur</th><th>Status</th></tr>{{range .Prosedur}}<tr><td>{{.prioritas}}</td><td>{{.kode}}</td><td>{{.deskripsi_panjang}}</td><td>{{.status}}</td></tr>{{end}}</table>
+{{end}}
+
+{{if eq .Tab "tindakan"}}
+{{if and (not $lock) (has .User "dokter" "perawat")}}<form method="post" action="{{.P}}/rawat/tindakan" class="card form">{{template "csrf" .}}<input type="hidden" name="no_rawat" value="{{$r.NoRawat}}">
+<div class="checks">{{range .MasterTindakan}}<label class="chk"><input type="checkbox" name="kd_jenis_prw" value="{{.kd_jenis_prw}}"> {{.nm_perawatan}} <small>{{rp .total_byrdr}}</small></label>{{end}}</div>
+<label>Dokter / pelaksana<select name="kd_dokter">{{range .Dokter}}<option value="{{.kd_dokter}}" {{if eq2 $.MyDokter .kd_dokter}}selected{{end}}>{{.nm_dokter}}</option>{{end}}</select></label>
+<div class="right"><button class="btn primary">Simpan tindakan</button></div></form>{{end}}
+<table class="list"><tr><th>Waktu</th><th>Jenis</th><th>Tindakan</th><th>Dokter</th><th class="r">Biaya</th><th></th></tr>{{range .Tindakan}}<tr><td>{{tgl .tgl_perawatan}} {{.jam_rawat}}</td><td>{{.jenis}}</td><td>{{.nm_perawatan}}</td><td>{{.nm_dokter}}</td><td class="r">{{rp .biaya_rawat}}</td>
+<td>{{if and (not $lock) (has $.User "dokter" "perawat")}}<form method="post" action="{{$.P}}/rawat/tindakan-hapus" class="inline">{{template "csrf" $}}<input type="hidden" name="no_rawat" value="{{$r.NoRawat}}"><input type="hidden" name="kd_jenis_prw" value="{{.kd_jenis_prw}}"><input type="hidden" name="tgl" value="{{.tgl_perawatan}}"><input type="hidden" name="jam" value="{{.jam_rawat}}"><input type="hidden" name="jenis" value="{{.jenis}}"><button class="link danger">Hapus</button></form>{{end}}</td></tr>{{else}}<tr><td colspan="6" class="muted">Belum ada tindakan</td></tr>{{end}}</table>
+{{if and (not $lock) (has .User "kasir" "perawat")}}<form method="post" action="{{.P}}/rawat/biaya" class="card form inlineform">{{template "csrf" .}}<input type="hidden" name="no_rawat" value="{{$r.NoRawat}}"><label>Biaya tambahan<input name="nama_biaya" placeholder="mis. Administrasi"></label><label>Besar<input type="number" name="besar_biaya"></label><button class="btn">Tambah</button></form>{{end}}
+{{end}}
+
+{{if eq .Tab "resep"}}
+{{if and (not $lock) (has .User "dokter")}}<form method="post" action="{{.P}}/rawat/resep" class="card form" id="resepform">{{template "csrf" .}}<input type="hidden" name="no_rawat" value="{{$r.NoRawat}}">
+<table class="resep"><tr><th>Obat</th><th>Jumlah</th><th>Aturan pakai</th></tr>
+{{range split "1,2,3,4,5" ","}}<tr><td><input name="kode_brng" data-ac="obat" autocomplete="off" placeholder="cari obat"></td><td><input name="jml" type="number" step="any" min="0"></td><td><input name="aturan" placeholder="3x1 sesudah makan"></td></tr>{{end}}</table>
+<div class="right"><button class="btn primary">Kirim resep ke farmasi</button></div></form>{{end}}
+<table class="list"><tr><th>No. resep</th><th>Waktu</th><th>Dokter</th><th>Isi</th><th>Status</th><th></th></tr>{{range .Resep}}<tr><td>{{.no_resep}}</td><td>{{tgl .tgl_peresepan}} {{.jam_peresepan}}</td><td>{{.nm_dokter}}</td><td>{{nl .isi}}</td>
+<td>{{if .tgl_penyerahan}}<span class="st st-Sudah">Diserahkan</span>{{else if .tgl_perawatan}}<span class="st">Disiapkan</span>{{else}}<span class="st st-Belum">Menunggu farmasi</span>{{end}}</td>
+<td>{{if and (not .tgl_perawatan) (not $lock) (has $.User "dokter")}}<form method="post" action="{{$.P}}/rawat/resep-hapus" class="inline">{{template "csrf" $}}<input type="hidden" name="no_rawat" value="{{$r.NoRawat}}"><input type="hidden" name="no_resep" value="{{.no_resep}}"><button class="link danger">Hapus</button></form>{{end}}</td></tr>{{else}}<tr><td colspan="6" class="muted">Belum ada resep</td></tr>{{end}}</table>
+{{end}}
+
+{{if eq .Tab "lab"}}
+{{if and (not $lock) (has .User "dokter")}}<form method="post" action="{{.P}}/rawat/lab" class="card form">{{template "csrf" .}}<input type="hidden" name="no_rawat" value="{{$r.NoRawat}}">
+<div class="checks">{{range .MasterLab}}<label class="chk"><input type="checkbox" name="kd_jenis_prw" value="{{.kd_jenis_prw}}"> {{.nm_perawatan}} <small>{{rp .total_byr}}</small></label>{{end}}</div>
+<label>Diagnosa klinis<input name="diagnosa_klinis"></label><div class="right"><button class="btn primary">Kirim permintaan lab</button></div></form>{{end}}
+<table class="list"><tr><th>No. order</th><th>Waktu</th><th>Pemeriksaan</th><th>Diagnosa klinis</th><th>Hasil</th></tr>{{range .Lab}}<tr><td>{{.noorder}}</td><td>{{tgl .tgl_permintaan}} {{.jam_permintaan}}</td><td>{{.isi}}</td><td>{{.diagnosa_klinis}}</td><td>{{if .tgl_hasil}}<a href="{{$.P}}/lab/cetak?no={{.noorder}}" target="_blank">Lihat hasil</a>{{else}}<span class="st st-Belum">Menunggu</span>{{end}}</td></tr>{{else}}<tr><td colspan="5" class="muted">Belum ada permintaan</td></tr>{{end}}</table>
+{{end}}
+
+{{if eq .Tab "kamar"}}
+<table class="list"><tr><th>Kamar</th><th>Bangsal</th><th>Masuk</th><th>Keluar</th><th>Lama</th><th class="r">Tarif</th><th>Status</th><th>Diagnosa</th></tr>{{range .Kamar}}<tr><td>{{.kd_kamar}}</td><td>{{.nm_bangsal}}</td><td>{{tgl .tgl_masuk}} {{.jam_masuk}}</td><td>{{tgl .tgl_keluar}} {{.jam_keluar}}</td><td>{{.lama}}</td><td class="r">{{rp .trf_kamar}}</td><td>{{if eq2 .stts_pulang "-"}}<b>Dirawat</b>{{else}}{{.stts_pulang}}{{end}}</td><td>{{.diagnosa_awal}} {{if .diagnosa_akhir}}→ {{.diagnosa_akhir}}{{end}}</td></tr>{{else}}<tr><td colspan="8" class="muted">Belum masuk kamar</td></tr>{{end}}</table>
+{{if not $lock}}<div class="grid2">
+{{if eq2 $r.StatusLanjut "Ralan"}}<form method="post" action="{{.P}}/rawat/kamar-masuk" class="card form">{{template "csrf" .}}<input type="hidden" name="no_rawat" value="{{$r.NoRawat}}"><h3>Masukkan ke rawat inap</h3>
+<label>Kamar kosong<select name="kd_kamar" required>{{range .KamarKosong}}<option value="{{.kd_kamar}}">{{.kd_kamar}} · {{.nm_bangsal}} · {{.kelas}} · {{rp .trf_kamar}}</option>{{end}}</select></label>
+<label>Diagnosa awal<input name="diagnosa_awal" required></label><label>DPJP<select name="kd_dokter">{{range .Dokter}}<option value="{{.kd_dokter}}" {{if eq2 $r.KdDokter .kd_dokter}}selected{{end}}>{{.nm_dokter}}</option>{{end}}</select></label>
+<button class="btn primary">Masuk kamar</button></form>
+{{else}}<form method="post" action="{{.P}}/rawat/kamar-pindah" class="card form">{{template "csrf" .}}<input type="hidden" name="no_rawat" value="{{$r.NoRawat}}"><h3>Pindah kamar</h3>
+<label>Kamar tujuan<select name="kd_kamar">{{range .KamarKosong}}<option value="{{.kd_kamar}}">{{.kd_kamar}} · {{.nm_bangsal}} · {{.kelas}} · {{rp .trf_kamar}}</option>{{end}}</select></label><button class="btn">Pindahkan</button></form>
+{{if has .User "dokter" "perawat"}}<form method="post" action="{{.P}}/rawat/kamar-pulang" class="card form" onsubmit="return confirm('Pulangkan pasien?')">{{template "csrf" .}}<input type="hidden" name="no_rawat" value="{{$r.NoRawat}}"><h3>Pulangkan</h3>
+<label>Status pulang<select name="stts_pulang">{{range split "Membaik,Sembuh,Sehat,Rujuk,APS,Atas Persetujuan Dokter,Atas Permintaan Sendiri,Pulang Paksa,Meninggal,Lain-lain" ","}}<option>{{.}}</option>{{end}}</select></label>
+<label>Diagnosa akhir<input name="diagnosa_akhir"></label><button class="btn primary">Pulangkan</button></form>{{end}}{{end}}
+</div>{{end}}
+{{end}}
+
+{{if eq .Tab "riwayat"}}
+<table class="list"><tr><th>No. rawat</th><th>Tanggal</th><th>Unit</th><th>Diagnosa</th><th>SOAP terakhir</th></tr>{{range .Riwayat}}<tr><td><a href="{{$.P}}/rawat?no={{.no_rawat}}">{{.no_rawat}}</a></td><td>{{tgl .tgl_registrasi}}</td><td>{{.nm_poli}} ({{.status_lanjut}})</td><td>{{.diagnosa}}</td><td>{{.soap}}</td></tr>{{else}}<tr><td colspan="5" class="muted">Tidak ada kunjungan sebelumnya</td></tr>{{end}}</table>
+{{end}}{{end}}

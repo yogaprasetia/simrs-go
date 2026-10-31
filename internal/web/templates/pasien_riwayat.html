@@ -1,0 +1,4 @@
+{{define "content"}}{{$p := .P_}}<h1>{{$p.nm_pasien}} <small>RM {{$p.no_rkm_medis}}</small></h1>
+<div class="card info">{{$p.jk}} · lahir {{$p.tmp_lahir}}, {{tgl $p.tgl_lahir}} · {{$p.alamat}} · {{$p.png_jawab}} {{$p.no_peserta}} · NIK {{$p.no_ktp}}</div>
+<table class="list"><tr><th>No. rawat</th><th>Tanggal</th><th>Jenis</th><th>Poli</th><th>Dokter</th><th>Bayar</th><th>Diagnosa</th><th>Status</th></tr>
+{{range .Visits}}<tr><td><a href="{{$.P}}/rawat?no={{.no_rawat}}">{{.no_rawat}}</a></td><td>{{tgl .tgl_registrasi}}</td><td>{{.status_lanjut}}</td><td>{{.nm_poli}}</td><td>{{.nm_dokter}}</td><td>{{.png_jawab}}</td><td>{{.diagnosa}}</td><td>{{.stts}} · {{.status_bayar}}</td></tr>{{else}}<tr><td colspan="8" class="muted">Belum pernah berkunjung</td></tr>{{end}}</table>{{end}}

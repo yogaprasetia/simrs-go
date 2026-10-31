@@ -1,0 +1,4 @@
+{{define "content"}}{{$r := .R}}<div class="slip">{{template "kop" .}}<h3>BUKTI REGISTRASI</h3>
+<div class="big">{{$r.NoReg}}</div><p>Nomor antrean {{$r.NmPoli}}</p>
+<table class="kv"><tr><td>No. rawat</td><td>{{$r.NoRawat}}</td></tr><tr><td>Tanggal</td><td>{{tgl $r.Tgl}} {{$r.Jam}}</td></tr><tr><td>No. RM</td><td>{{$r.NoRM}}</td></tr><tr><td>Nama</td><td>{{$r.Nama}}</td></tr><tr><td>Umur</td><td>{{$r.Umur}}</td></tr><tr><td>Dokter</td><td>{{$r.NmDokter}}</td></tr><tr><td>Cara bayar</td><td>{{$r.PngJawab}}</td></tr><tr><td>Biaya reg.</td><td>{{rp $r.Biaya}}</td></tr></table>
+<button class="btn noprint" onclick="print()">Cetak</button></div>{{end}}

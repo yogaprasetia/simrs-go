@@ -1,0 +1,4 @@
+{{define "content"}}{{$o := .O}}<div class="paper">{{template "kop" .}}<h3>HASIL PEMERIKSAAN LABORATORIUM</h3>
+<table class="kv"><tr><td>No. RM / Nama</td><td>{{$o.no_rkm_medis}} / {{$o.nm_pasien}} ({{$o.jk}}, {{$o.umur}})</td><td>No. order</td><td>{{$o.noorder}}</td></tr><tr><td>Perujuk</td><td>{{$o.nm_dokter}} · {{$o.nm_poli}}</td><td>Tgl hasil</td><td>{{tgl $o.tgl_hasil}} {{$o.jam_hasil}}</td></tr></table>
+<table class="list"><tr><th>Pemeriksaan</th><th>Hasil</th><th>Satuan</th><th>Nilai rujukan</th><th>Ket.</th></tr>{{$last := ""}}{{range .Items}}{{if ne $last .nm_perawatan}}<tr class="grp"><td colspan="5">{{.nm_perawatan}}</td></tr>{{end}}{{$last = .nm_perawatan}}<tr><td>{{.Pemeriksaan}}</td><td><b>{{.nilai}}</b></td><td>{{.satuan}}</td><td>{{.rujukan}}</td><td><b>{{.flag}}</b></td></tr>{{end}}</table>
+<p class="muted">H = di atas nilai rujukan, L = di bawah nilai rujukan.</p><button class="btn noprint" onclick="print()">Cetak</button></div>{{end}}

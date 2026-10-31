@@ -1,0 +1,6 @@
+{{define "content"}}<h1>Pengguna</h1>
+<form method="post" action="{{.P}}/admin/users" class="card form">{{template "csrf" .}}<div class="g3"><label>ID user<input name="id_user" required></label><label>Nama<input name="nama"></label><label>Password (min. 8, kosongkan bila tidak diubah)<input type="password" name="password" autocomplete="new-password"></label>
+<label>Dokter terkait<select name="kd_dokter"><option value="">—</option>{{range .Dokter}}<option value="{{.kd_dokter}}">{{.nm_dokter}}</option>{{end}}</select></label></div>
+<div class="checks">{{range .Roles}}<label class="chk"><input type="checkbox" name="roles" value="{{.}}"> {{.}}</label>{{end}}</div><div class="right"><button class="btn primary">Simpan</button></div></form>
+<table class="list"><tr><th>ID</th><th>Nama</th><th>Peran</th><th>Dokter</th><th>Aktif</th><th></th></tr>{{range .List}}<tr class="{{if eq2 .aktif "0"}}batal{{end}}"><td>{{.id_user}}</td><td>{{.nama}}</td><td>{{.roles}}</td><td>{{.nm_dokter}}</td><td>{{.aktif}}</td>
+<td><form method="post" action="{{$.P}}/admin/users" class="inline">{{template "csrf" $}}<input type="hidden" name="id_user" value="{{.id_user}}"><input type="hidden" name="hapus" value="1"><button class="link">{{if eq2 .aktif "1"}}Nonaktifkan{{else}}Aktifkan{{end}}</button></form></td></tr>{{end}}</table>{{end}}

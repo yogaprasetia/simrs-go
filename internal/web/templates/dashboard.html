@@ -1,0 +1,15 @@
+{{define "content"}}<h1>Dashboard <small>{{tgl .Today}}</small></h1>
+<div class="stats">
+<a class="stat" href="{{.P}}/registrasi"><b>{{.Kunjungan}}</b>Kunjungan hari ini</a>
+<a class="stat" href="{{.P}}/ralan"><b>{{.BelumPeriksa}}</b>Belum diperiksa</a>
+<a class="stat" href="{{.P}}/ranap"><b>{{.Ranap}} / {{.Bed}}</b>Pasien rawat inap / bed</a>
+<a class="stat" href="{{.P}}/farmasi"><b>{{.Resep}}</b>Resep menunggu</a>
+<a class="stat" href="{{.P}}/lab"><b>{{.Lab}}</b>Order lab menunggu</a>
+<a class="stat" href="{{.P}}/kasir"><b>{{.BelumBayar}}</b>Belum bayar (30 hr)</a>
+<div class="stat"><b>{{rp .Pendapatan}}</b>Pendapatan kasir hari ini</div>
+</div>
+<div class="grid2">
+<div class="card"><h3>Kunjungan per poli</h3><table><tr><th>Poli</th><th class="r">Jumlah</th><th class="r">Belum</th></tr>
+{{range .PerPoli}}<tr><td>{{.nm_poli}}</td><td class="r">{{.jml}}</td><td class="r">{{.belum}}</td></tr>{{else}}<tr><td colspan="3" class="muted">Belum ada kunjungan</td></tr>{{end}}</table></div>
+<div class="card"><h3>Cara bayar</h3><table>{{range .PerBayar}}<tr><td>{{.png_jawab}}</td><td class="r">{{.jml}}</td></tr>{{else}}<tr><td class="muted">-</td></tr>{{end}}</table></div>
+</div>{{end}}

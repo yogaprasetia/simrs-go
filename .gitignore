@@ -1,0 +1,6 @@
+simrs.env
+*.env
+!simrs.env.example
+/simrs
+/simrs.exe
+/dist/

@@ -1,0 +1,6 @@
+{{define "content"}}<h1>Rawat Jalan / IGD</h1>
+<form class="bar"><input type="date" name="tgl" value="{{.Tgl}}"><select name="poli"><option value="">Semua poli</option>{{range .Poli}}<option value="{{.kd_poli}}" {{if eq2 $.PoliSel .kd_poli}}selected{{end}}>{{.nm_poli}}</option>{{end}}</select>
+<select name="dokter"><option value="">Semua dokter</option>{{range .Dokter}}<option value="{{.kd_dokter}}" {{if eq2 $.DokSel .kd_dokter}}selected{{end}}>{{.nm_dokter}}</option>{{end}}</select><input type="hidden" name="semua" value="1"><button class="btn">Tampilkan</button></form>
+<table class="list"><tr><th>Antre</th><th>No. rawat</th><th>Pasien</th><th>Umur</th><th>Poli</th><th>Dokter</th><th>Bayar</th><th>Status</th></tr>
+{{range .List}}<tr onclick="location='{{$.P}}/rawat?no={{.no_rawat}}'" class="click"><td><b>{{.no_reg}}</b></td><td>{{.no_rawat}}</td><td>{{.no_rkm_medis}} <b>{{.nm_pasien}}</b> ({{.jk}})</td><td>{{.umur}}</td><td>{{.nm_poli}}</td><td>{{.nm_dokter}}</td><td>{{.png_jawab}}</td><td><span class="st st-{{.stts}}">{{.stts}}</span>{{if eq2 .status_bayar "Sudah Bayar"}} <span class="tag">Lunas</span>{{end}}</td></tr>
+{{else}}<tr><td colspan="8" class="muted">Tidak ada pasien</td></tr>{{end}}</table>{{end}}

@@ -1,0 +1,11 @@
+{{define "content"}}{{$o := .O}}<h1>Resep {{$o.no_resep}} {{if not .Print}}<a class="btn" href="?no={{$o.no_resep}}&cetak=1" target="_blank">Cetak etiket</a>{{end}}</h1>
+<div class="card info">{{$o.no_rkm_medis}} <b>{{$o.nm_pasien}}</b> · lahir {{tgl $o.tgl_lahir}} · {{$o.no_rawat}} · {{$o.nm_dokter}} · {{$o.png_jawab}} · {{$o.status}}</div>
+{{if .Alergi}}<div class="alert">⚠ Alergi: {{.Alergi}}</div>{{end}}
+<table class="list"><tr><th>Obat</th><th class="r">Jumlah</th><th>Aturan pakai</th><th class="r">Harga</th><th class="r">Subtotal</th><th class="r">Stok depo</th></tr>
+{{range .Items}}<tr><td>{{.nama_brng}}</td><td class="r">{{num .jml}} {{.kode_sat}}</td><td>{{.aturan_pakai}}</td><td class="r">{{rp .harga}}</td><td class="r">{{rp (mul .harga .jml)}}</td><td class="r {{if lt (toF .stok) (toF .jml)}}danger{{end}}">{{num .stok}}</td></tr>{{end}}
+<tr><th colspan="4">Perkiraan total</th><th class="r">{{rp .Total}}</th><th></th></tr></table>
+{{if not .Print}}<div class="right">
+{{if not $o.tgl_perawatan}}<form method="post" action="{{.P}}/farmasi/validasi" class="inline">{{template "csrf" .}}<input type="hidden" name="no_resep" value="{{$o.no_resep}}"><button class="btn primary">Validasi & potong stok</button></form>
+{{else if not $o.tgl_penyerahan}}<form method="post" action="{{.P}}/farmasi/serahkan" class="inline">{{template "csrf" .}}<input type="hidden" name="no_resep" value="{{$o.no_resep}}"><button class="btn primary">Serahkan obat ke pasien</button></form>
+{{else}}<span class="tag big">Diserahkan {{tgl $o.tgl_penyerahan}} {{$o.jam_penyerahan}}</span>{{end}}</div>{{else}}
+<div class="etiket">{{range .Items}}<div class="et"><b>{{$.Instansi}}</b><br>{{$o.nm_pasien}} ({{$o.no_rkm_medis}})<br><b>{{.nama_brng}}</b> × {{num .jml}}<br><big>{{.aturan_pakai}}</big><br><small>{{tgl $.Today}}</small></div>{{end}}</div>{{end}}{{end}}

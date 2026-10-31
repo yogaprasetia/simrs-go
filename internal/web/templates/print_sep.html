@@ -1,0 +1,7 @@
+{{define "content"}}{{$s := .S}}<div class="paper">{{template "kop" .}}<h3>SURAT ELIGIBILITAS PESERTA</h3>
+<table class="kv"><tr><td>No. SEP</td><td><b>{{$s.no_sep}}</b></td><td>Peserta</td><td>{{$s.peserta}}</td></tr><tr><td>Tgl SEP</td><td>{{tgl $s.tglsep}}</td><td>Jns rawat</td><td>{{if eq2 $s.jnspelayanan "1"}}Rawat Inap{{else}}Rawat Jalan{{end}}</td></tr>
+<tr><td>No. kartu</td><td>{{$s.no_kartu}} (MR {{$s.nomr}})</td><td>Kelas hak</td><td>Kelas {{$s.klsrawat}}</td></tr><tr><td>Nama</td><td>{{$s.nama_pasien}} ({{$s.jkel}})</td><td>Faskes perujuk</td><td>{{$s.nmppkrujukan}}</td></tr>
+<tr><td>Tgl lahir</td><td>{{tgl $s.tanggal_lahir}}</td><td>No. rujukan</td><td>{{$s.no_rujukan}}</td></tr><tr><td>Poli tujuan</td><td>{{$s.nmpolitujuan}}</td><td>DPJP</td><td>{{$s.nmdpdjp}}</td></tr>
+<tr><td>Diagnosa awal</td><td colspan="3">{{$s.diagawal}} {{$s.nmdiagnosaawal}}</td></tr><tr><td>Catatan</td><td colspan="3">{{$s.catatan}}</td></tr></table>
+<p class="muted small">*Saya menyetujui BPJS Kesehatan menggunakan informasi medis pasien jika diperlukan. SEP bukan sebagai bukti penjaminan peserta.</p>
+<div class="ttd">Pasien/keluarga<br><br><br>________________</div><button class="btn noprint" onclick="print()">Cetak</button></div>{{end}}

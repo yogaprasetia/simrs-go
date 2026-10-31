@@ -1,0 +1,16 @@
+{{define "content"}}{{$r := .R}}<h1>Buat SEP — {{$r.Nama}}</h1>
+<div class="card info">{{$r.NoRawat}} · RM {{$r.NoRM}} · {{$r.NmPoli}} · {{$r.NmDokter}} · {{$r.StatusLanjut}} · No. kartu <b>{{$r.NoPeserta}}</b></div>
+{{if .PErr}}<div class="flash err">Peserta: {{.PErr}}</div>{{end}}{{if .RErr}}<div class="flash err">Rujukan: {{.RErr}}</div>{{end}}
+{{with .Peserta}}<div class="card info">BPJS: <b>{{.nama}}</b> · status <b>{{.statusPeserta.keterangan}}</b> · hak {{.hakKelas.keterangan}} · {{.jenisPeserta.keterangan}}</div>{{end}}
+<form method="post" action="{{.P}}/bpjs/sep" class="card form">{{template "csrf" .}}<input type="hidden" name="no_rawat" value="{{$r.NoRawat}}">
+<div class="g3"><label>No. kartu<input name="no_kartu" value="{{$r.NoPeserta}}" required></label>
+<label>Kelas hak<select name="klsrawat">{{$k := ""}}{{with .Peserta}}{{$k = .hakKelas.kode}}{{end}}{{range split "1,2,3" ","}}<option {{if eq2 $k .}}selected{{end}}>{{.}}</option>{{end}}</select></label>
+<label>Asal rujukan<select name="asal_rujukan"><option value="1">Faskes 1</option><option value="2">Faskes 2 (RS)</option></select></label>
+{{$ruj := .Rujukan}}<label>No. rujukan<input name="no_rujukan" value="{{with $ruj}}{{.noKunjungan}}{{end}}"></label>
+<label>Tgl rujukan<input type="date" name="tglrujukan" value="{{with $ruj}}{{.tglKunjungan}}{{end}}"></label>
+<label>PPK perujuk<input name="kdppkrujukan" value="{{with $ruj}}{{.provPerujuk.kode}}{{end}}"><input type="hidden" name="nmppkrujukan" value="{{with $ruj}}{{.provPerujuk.nama}}{{end}}"></label>
+<label>Diagnosa awal (ICD-10)<input name="diagawal" data-ac="penyakit" value="{{if .Diag}}{{.Diag}}{{else}}{{with $ruj}}{{.diagnosa.kode}}{{end}}{{end}}" required autocomplete="off"></label>
+<label>Poli tujuan (kode BPJS)<input name="kdpolitujuan" value="{{.X.kd_poli_bpjs}}"></label>
+<label>DPJP (kode BPJS)<input name="kddpjp" value="{{.X.kd_dokter_bpjs}}"></label>
+<label>No. telepon<input name="notelep" value="{{.X.no_tlp}}"></label><label class="span2">Catatan<input name="catatan"></label></div>
+<div class="right"><button class="btn primary">Terbitkan SEP</button></div></form>{{end}}

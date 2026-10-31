@@ -1,0 +1,25 @@
+{{define "content"}}{{$p := .P_}}<h1>{{.Title}}</h1>
+{{if .Err}}<div class="flash err">{{.Err}}</div>{{end}}
+<form method="post" action="{{.P}}/pasien/simpan" class="card form">{{template "csrf" .}}
+<input type="hidden" name="no_rkm_medis" value="{{$p.no_rkm_medis}}"><input type="hidden" name="next" value="{{.Next}}">
+<div class="g3">
+<label>Nama lengkap *<input name="nm_pasien" value="{{$p.nm_pasien}}" required></label>
+<label>NIK (16 digit)<input name="no_ktp" value="{{$p.no_ktp}}" maxlength="16" pattern="[0-9]{16}"></label>
+<label>Jenis kelamin *<select name="jk"><option value="L" {{if eq2 $p.jk "L"}}selected{{end}}>Laki-laki</option><option value="P" {{if eq2 $p.jk "P"}}selected{{end}}>Perempuan</option></select></label>
+<label>Tempat lahir<input name="tmp_lahir" value="{{$p.tmp_lahir}}"></label>
+<label>Tanggal lahir *<input type="date" name="tgl_lahir" value="{{$p.tgl_lahir}}" required></label>
+<label>Nama ibu kandung<input name="nm_ibu" value="{{$p.nm_ibu}}"></label>
+<label class="span2">Alamat<input name="alamat" value="{{$p.alamat}}"></label>
+<label>No. telepon<input name="no_tlp" value="{{$p.no_tlp}}"></label>
+<label>Gol. darah<select name="gol_darah">{{range split "-,A,B,AB,O" ","}}<option {{if eq2 $p.gol_darah .}}selected{{end}}>{{.}}</option>{{end}}</select></label>
+<label>Agama<select name="agama">{{range split "ISLAM,KRISTEN,KATOLIK,HINDU,BUDHA,KONGHUCU,-" ","}}<option {{if eq2 $p.agama .}}selected{{end}}>{{.}}</option>{{end}}</select></label>
+<label>Status nikah<select name="stts_nikah">{{range split "BELUM MENIKAH,MENIKAH,JANDA,DUDHA" ","}}<option {{if eq2 $p.stts_nikah .}}selected{{end}}>{{.}}</option>{{end}}</select></label>
+<label>Pendidikan<select name="pnd">{{range split "-,TS,TK,SD,SMP,SMA,D3,S1,S2,S3" ","}}<option {{if eq2 $p.pnd .}}selected{{end}}>{{.}}</option>{{end}}</select></label>
+<label>Pekerjaan<input name="pekerjaan" value="{{$p.pekerjaan}}"></label>
+<label>Penanggung jawab<input name="namakeluarga" value="{{$p.namakeluarga}}"></label>
+<label>Hubungan<select name="keluarga">{{range split "DIRI SENDIRI,AYAH,IBU,ISTRI,SUAMI,SAUDARA,ANAK,LAIN-LAIN" ","}}<option {{if eq2 $p.keluarga .}}selected{{end}}>{{.}}</option>{{end}}</select></label>
+<label>Cara bayar<select name="kd_pj">{{range .Penjab}}<option value="{{.kd_pj}}" {{if eq2 $p.kd_pj .kd_pj}}selected{{end}}>{{.png_jawab}}</option>{{end}}</select></label>
+<label>No. kartu BPJS / asuransi<input name="no_peserta" value="{{$p.no_peserta}}"></label>
+</div>
+<div class="right"><a class="btn" href="javascript:history.back()">Batal</a> <button class="btn primary">Simpan</button></div>
+</form>{{end}}

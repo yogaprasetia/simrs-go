@@ -1,0 +1,4 @@
+{{define "content"}}<h1>Farmasi <a class="btn" href="{{.P}}/farmasi/stok">Stok obat</a></h1>
+<div class="tabs">{{range split "baru:Resep baru,siap:Siap diserahkan,selesai:Selesai (3 hari)" ","}}{{$kv := split . ":"}}<a href="?st={{index $kv 0}}" class="{{if eq2 $.St (index $kv 0)}}on{{end}}">{{index $kv 1}}</a>{{end}}</div>
+<table class="list"><tr><th>No. resep</th><th>Waktu</th><th>Pasien</th><th>Asal</th><th>Dokter</th><th>Bayar</th><th>Item</th></tr>
+{{range .List}}<tr class="click" onclick="location='{{$.P}}/farmasi/resep?no={{.no_resep}}'"><td>{{.no_resep}}</td><td>{{tgl .tgl_peresepan}} {{.jam_peresepan}}</td><td>{{.no_rkm_medis}} <b>{{.nm_pasien}}</b></td><td>{{.nm_poli}} ({{.status}})</td><td>{{.nm_dokter}}</td><td>{{.png_jawab}}</td><td>{{.item}}</td></tr>{{else}}<tr><td colspan="7" class="muted">Tidak ada resep</td></tr>{{end}}</table>{{end}}
