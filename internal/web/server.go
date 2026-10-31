@@ -46,6 +46,8 @@ type Server struct {
 	SS        *satusehat.Client
 	// Demo: bila diisi, halaman login menampilkan akun demo (tombol masuk sekali klik). Hanya untuk server demo.
 	Demo []DemoUser
+	// Brand: tema warna IDDS (inagov, panrb, bkn, lan, bgn, inaku, inapas, netral). Bawaan inagov.
+	Brand string
 }
 
 type DemoUser struct{ ID, Nama, Peran, Password string }
@@ -85,6 +87,18 @@ func New(db *sql.DB, b *bpjs.Client, secret []byte) (*Server, error) {
 		s.Instansi = "Rumah Sakit"
 	}
 	funcs := template.FuncMap{
+		"icon": func(name string) template.HTML {
+			return template.HTML(`<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">` + icons[name] + `</svg>`)
+		},
+		"initials": func(n string) string {
+			out := ""
+			for _, w := range strings.Fields(strings.NewReplacer(".", " ", ",", " ").Replace(n)) {
+				if len(out) < 2 && (len(w) > 2 || out == "") {
+					out += strings.ToUpper(w[:1])
+				}
+			}
+			return out
+		},
 		"rp":    rupiah,
 		"num":   func(v any) string { return fmtNum(toF(v)) },
 		"tgl":   tglIndo,
@@ -261,26 +275,30 @@ func (s *Server) audit(r *http.Request, user, aksi, ref, detail string) {
 type MenuItem struct {
 	Href, Label, Icon string
 	Roles             []string
+	Group             string
 }
 
+// Brands: tema warna merek IDDS (atribut data-brand pada <html>).
+var Brands = map[string]bool{"inagov": true, "panrb": true, "bkn": true, "lan": true, "bgn": true, "inaku": true, "inapas": true, "netral": true}
+
 var menu = []MenuItem{
-	{"/", "Dashboard", "🏠", nil},
-	{"/registrasi", "Registrasi", "📝", []string{"pendaftaran"}},
-	{"/pasien", "Data Pasien", "👤", []string{"pendaftaran", "dokter", "perawat"}},
-	{"/ralan", "Rawat Jalan / IGD", "🩺", []string{"dokter", "perawat"}},
-	{"/ranap", "Rawat Inap", "🛏", []string{"dokter", "perawat", "pendaftaran"}},
-	{"/farmasi", "Farmasi", "💊", []string{"farmasi"}},
-	{"/lab", "Laboratorium", "🧪", []string{"lab"}},
-	{"/radiologi", "Radiologi", "🩻", []string{"radiologi"}},
-	{"/operasi", "Kamar Operasi / VK", "⚕", []string{"ok", "dokter", "perawat", "kasir"}},
-	{"/gizi", "Gizi", "🍲", []string{"gizi", "perawat"}},
-	{"/kasir", "Kasir", "💰", []string{"kasir"}},
-	{"/logistik", "Logistik Farmasi", "📦", []string{"farmasi"}},
-	{"/keuangan", "Keuangan & Akuntansi", "📒", []string{"keuangan", "manajemen"}},
-	{"/bpjs", "Bridging BPJS", "🏥", []string{"bpjs", "pendaftaran"}},
-	{"/satusehat", "SATUSEHAT", "🇮🇩", []string{"bpjs", "manajemen"}},
-	{"/laporan", "Laporan", "📊", []string{"manajemen"}},
-	{"/admin/users", "Pengguna", "⚙", nil},
+	{"/", "Dashboard", "home", nil, ""},
+	{"/registrasi", "Registrasi", "registrasi", []string{"pendaftaran"}, "Pelayanan"},
+	{"/pasien", "Data Pasien", "pasien", []string{"pendaftaran", "dokter", "perawat"}, "Pelayanan"},
+	{"/ralan", "Rawat Jalan / IGD", "ralan", []string{"dokter", "perawat"}, "Pelayanan"},
+	{"/ranap", "Rawat Inap", "ranap", []string{"dokter", "perawat", "pendaftaran"}, "Pelayanan"},
+	{"/operasi", "Kamar Operasi / VK", "operasi", []string{"ok", "dokter", "perawat", "kasir"}, "Pelayanan"},
+	{"/farmasi", "Farmasi", "farmasi", []string{"farmasi"}, "Penunjang"},
+	{"/lab", "Laboratorium", "lab", []string{"lab"}, "Penunjang"},
+	{"/radiologi", "Radiologi", "radiologi", []string{"radiologi"}, "Penunjang"},
+	{"/gizi", "Gizi", "gizi", []string{"gizi", "perawat"}, "Penunjang"},
+	{"/logistik", "Logistik Farmasi", "logistik", []string{"farmasi"}, "Penunjang"},
+	{"/kasir", "Kasir", "kasir", []string{"kasir"}, "Keuangan"},
+	{"/keuangan", "Keuangan & Akuntansi", "keuangan", []string{"keuangan", "manajemen"}, "Keuangan"},
+	{"/bpjs", "Bridging BPJS", "bpjs", []string{"bpjs", "pendaftaran"}, "Integrasi"},
+	{"/satusehat", "SATUSEHAT", "satusehat", []string{"bpjs", "manajemen"}, "Integrasi"},
+	{"/laporan", "Laporan", "laporan", []string{"manajemen"}, "Manajemen"},
+	{"/admin/users", "Pengguna", "pengguna", nil, "Manajemen"},
 }
 
 func (s *Server) render(w http.ResponseWriter, r *http.Request, page string, data map[string]any, code int) {
@@ -296,6 +314,10 @@ func (s *Server) render(w http.ResponseWriter, r *http.Request, page string, dat
 	data["User"] = u
 	data["Instansi"] = s.Instansi
 	data["P"] = s.Prefix
+	data["Brand"] = s.Brand
+	if !Brands[s.Brand] {
+		data["Brand"] = "inagov"
+	}
 	data["Path"] = strings.TrimPrefix(r.URL.Path, s.Prefix)
 	data["Today"] = core.Today()
 	data["Msg"] = r.URL.Query().Get("msg")

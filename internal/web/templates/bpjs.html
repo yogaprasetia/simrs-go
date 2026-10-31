@@ -1,8 +1,8 @@
 {{define "content"}}<h1>Bridging BPJS <span class="tag">{{.Cfg.Mode}}</span></h1>
-{{if eq .Cfg.Mode "off"}}<div class="alert">Bridging nonaktif. Isi kredensial BPJS di file konfigurasi server (bukan di sini) lalu set BPJS_MODE=dev/prod.</div>{{end}}
-{{if eq .Cfg.Mode "mock"}}<div class="alert">Mode <b>mock</b>: memakai server tiruan lokal (kartu contoh 0001234567890, 0001234567891, 0001234567892; 0009999999999 = nonaktif). Tidak terhubung ke BPJS sungguhan.</div>{{end}}
+{{if eq .Cfg.Mode "off"}}<div class="alert">{{icon "info"}}<span>Bridging nonaktif. Isi kredensial BPJS di file konfigurasi server (bukan di sini) lalu set BPJS_MODE=dev/prod.</span></div>{{end}}
+{{if eq .Cfg.Mode "mock"}}<div class="alert">{{icon "info"}}<span>Mode <b>mock</b>: memakai server tiruan lokal (kartu contoh 0001234567890, 0001234567891, 0001234567892; 0009999999999 = nonaktif). Tidak terhubung ke BPJS sungguhan.</span></div>{{end}}
 <form class="bar"><input name="cek" value="{{.CekQ}}" placeholder="No. kartu BPJS (13 digit) atau NIK (16 digit)"><button class="btn">Cek kepesertaan</button></form>
-{{if .CekErr}}<div class="flash err">{{.CekErr}}</div>{{end}}
+{{if .CekErr}}<div class="flash err" role="alert">{{icon "err"}}<span>{{.CekErr}}</span></div>{{end}}
 {{with .Cek}}<div class="card info"><b>{{.nama}}</b> · {{.noKartu}} · NIK {{.nik}} · {{.sex}} · lahir {{.tglLahir}}<br>Status: <b>{{.statusPeserta.keterangan}}</b> · Hak kelas: {{.hakKelas.keterangan}} · {{.jenisPeserta.keterangan}} · FKTP: {{.provUmum.nmProvider}}</div>{{end}}
 <h2>Pasien BPJS belum ber-SEP (3 hari)</h2>
 <table class="list"><tr><th>No. rawat</th><th>Tanggal</th><th>Pasien</th><th>No. kartu</th><th>Poli</th><th></th></tr>{{range .Belum}}<tr><td>{{.no_rawat}}</td><td>{{tgl .tgl_registrasi}}</td><td>{{.nm_pasien}}</td><td>{{.no_peserta}}</td><td>{{.nm_poli}}</td><td class="act"><a class="btn primary" href="{{$.P}}/bpjs/sep?no={{.no_rawat}}">Buat SEP</a>

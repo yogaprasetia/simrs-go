@@ -159,6 +159,7 @@ func main() {
 	srv.Prefix = strings.TrimRight(env("BASE_PATH", ""), "/")
 	srv.UploadDir = env("UPLOAD_DIR", "uploads")
 	srv.Demo = demo
+	srv.Brand = strings.ToLower(env("UI_BRAND", "inagov"))
 
 	ss := satusehat.Config{Mode: env("SATUSEHAT_MODE", "off"), ClientID: env("SATUSEHAT_CLIENT_ID", ""), ClientSecret: env("SATUSEHAT_CLIENT_SECRET", ""), OrgID: env("SATUSEHAT_ORG_ID", "")}
 	switch ss.Mode {

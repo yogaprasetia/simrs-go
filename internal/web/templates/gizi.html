@@ -6,7 +6,7 @@
 <form method="post" action="{{.P}}/gizi/salin" class="inline">{{template "csrf" .}}<input type="hidden" name="tab" value="pasien"><input type="hidden" name="tgl" value="{{.Tgl}}"><input type="hidden" name="dari" value="{{.Kemarin}}"><button class="btn">Salin diet dari {{tgl .Kemarin}}</button></form></div>
 <table class="list gizi"><tr><th>Kamar</th><th>Pasien</th><th>Diagnosa / alergi</th>{{range .Waktu}}<th>{{.waktu}} <small>{{.jam}}</small></th>{{end}}<th></th></tr>
 {{range $p := .Pasien}}{{$s := index $.Set $p.no_rawat}}<tr class="{{if not $s}}warnrow{{end}}"><td>{{$p.kd_kamar}}<br><small>{{$p.nm_bangsal}} · {{$p.kelas}}</small></td><td>{{$p.no_rkm_medis}} <b>{{$p.nm_pasien}}</b><br><small>{{$p.jk}} · {{$p.umur}}</small></td>
-<td>{{$p.diagnosa_awal}}{{if $p.alergi}}<br><span class="danger small">⚠ {{$p.alergi}}</span>{{end}}</td>
+<td>{{$p.diagnosa_awal}}{{if $p.alergi}}<br><span class="badge error">{{icon "alert"}} {{$p.alergi}}</span>{{end}}</td>
 {{range $.Waktu}}<td><select name="w_{{.waktu}}" form="f{{$p.no_rawat}}" class="dietsel"><option value="">—</option>{{$cur := index $s .waktu}}{{range $.Diet}}<option value="{{.kd_diet}}" {{if eq2 $cur .kd_diet}}selected{{end}}>{{.nama_diet}}</option>{{end}}</select></td>{{end}}
 <td><form method="post" action="{{$.P}}/gizi/simpan" id="f{{$p.no_rawat}}">{{template "csrf" $}}<input type="hidden" name="tab" value="pasien"><input type="hidden" name="tgl" value="{{$.Tgl}}"><input type="hidden" name="no_rawat" value="{{$p.no_rawat}}"><button class="btn">Simpan</button></form></td></tr>
 {{else}}<tr><td colspan="9" class="muted">Tidak ada pasien rawat inap</td></tr>{{end}}</table>

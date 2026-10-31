@@ -278,7 +278,7 @@ func TestWebAlurLengkap(t *testing.T) {
 		dr.get(rw+"&tab="+tab, 200)
 	}
 	dr.postOK("/rawat/soap", url.Values{"no_rawat": {noRawat}, "tensi": {"160/100"}, "nadi": {"88"}, "keluhan": {"pusing"}, "penilaian": {"Hipertensi"}, "rtl": {"amlodipine"}, "alergi": {"Amoxicillin"}})
-	if !strings.Contains(dr.get(rw, 200), "Alergi: Amoxicillin") {
+	if !strings.Contains(dr.get(rw, 200), "Alergi:</b> Amoxicillin") {
 		t.Fatal("peringatan alergi tidak tampil")
 	}
 	dr.postOK("/rawat/diagnosa", url.Values{"no_rawat": {noRawat}, "kd_penyakit": {"I10 Essential (primary) hypertension"}})
@@ -308,7 +308,7 @@ func TestWebAlurLengkap(t *testing.T) {
 		t.Fatal("resep tidak muncul di farmasi")
 	}
 	body = apt.get("/farmasi/resep?no="+noResep, 200)
-	if !strings.Contains(body, "Alergi: Amoxicillin") || !strings.Contains(body, "Rp 35.000") {
+	if !strings.Contains(body, "Alergi:</b> Amoxicillin") || !strings.Contains(body, "Rp 35.000") {
 		t.Fatalf("detail resep (alergi/total):\n%s", trim(body[strings.Index(body, "<main"):]))
 	}
 	apt.postOK("/farmasi/validasi", url.Values{"no_resep": {noResep}})

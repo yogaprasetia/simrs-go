@@ -1,7 +1,7 @@
 {{define "content"}}<h1>SATUSEHAT <span class="tag">{{.Cfg.Mode}}</span>{{if .Cfg.OrgID}} <small>Org {{.Cfg.OrgID}}</small>{{end}}
 {{if has .User "bpjs"}}<form method="post" action="{{.P}}/satusehat/token" class="inline">{{template "csrf" .}}<input type="hidden" name="tab" value="{{.Tab}}"><button class="btn">Tes koneksi</button></form>{{end}}</h1>
-{{if eq .Cfg.Mode "off"}}<div class="alert">Bridging nonaktif. Isi SATUSEHAT_MODE, SATUSEHAT_CLIENT_ID, SATUSEHAT_CLIENT_SECRET dan SATUSEHAT_ORG_ID di file konfigurasi server (tidak lewat halaman ini).</div>{{end}}
-{{if eq .Cfg.Mode "mock"}}<div class="alert">Mode <b>mock</b>: server tiruan lokal. NIK 16 digit apa pun dianggap terdaftar, kecuali yang diawali 9999. Tidak terhubung ke Kemenkes.</div>{{end}}
+{{if eq .Cfg.Mode "off"}}<div class="alert">{{icon "info"}}<span>Bridging nonaktif. Isi SATUSEHAT_MODE, SATUSEHAT_CLIENT_ID, SATUSEHAT_CLIENT_SECRET dan SATUSEHAT_ORG_ID di file konfigurasi server (tidak lewat halaman ini).</span></div>{{end}}
+{{if eq .Cfg.Mode "mock"}}<div class="alert">{{icon "info"}}<span>Mode <b>mock</b>: server tiruan lokal. NIK 16 digit apa pun dianggap terdaftar, kecuali yang diawali 9999. Tidak terhubung ke Kemenkes.</span></div>{{end}}
 <div class="tabs">{{range split "kirim:Kirim data,mapping:Mapping lokasi & dokter,terminologi:Mapping obat/lab/radiologi,log:Log" ","}}{{$kv := split . ":"}}<a href="?tab={{index $kv 0}}&dari={{$.Dari}}&sampai={{$.Sampai}}" class="{{if eq2 $.Tab (index $kv 0)}}on{{end}}">{{index $kv 1}}</a>{{end}}</div>
 
 {{if eq .Tab "kirim"}}

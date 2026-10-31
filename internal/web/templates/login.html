@@ -1,9 +1,9 @@
-{{define "content"}}<div class="login"><form method="post" class="card">
-<h1>SIMRS</h1><p class="muted">{{.Instansi}}</p>
-{{if .Err}}<div class="flash err">{{.Err}}</div>{{end}}
+{{define "content"}}<div class="login"><form method="post" class="card" aria-labelledby="judul-login">
+<div class="brandline"><span class="brand" style="padding:0;border:0;margin:0"><span class="logo">{{icon "hospital"}}</span></span><div><h1 id="judul-login">Masuk SIMRS</h1><span class="muted">{{.Instansi}}</span></div></div>
+{{if .Err}}<div class="flash err" role="alert">{{icon "err"}}<span>{{.Err}}</span></div>{{end}}
 <input type="hidden" name="next" value="{{.Next}}">
-<label>User<input name="user" value="{{.LoginUser}}" autofocus required autocomplete="username"></label>
-<label>Password<input type="password" name="password" required autocomplete="current-password"></label>
+<div class="form"><label>Nama pengguna<input name="user" value="{{.LoginUser}}" autofocus required autocomplete="username" placeholder="Masukkan nama pengguna"></label>
+<label>Kata sandi<input type="password" name="password" required autocomplete="current-password" placeholder="Masukkan kata sandi"></label></div>
 <button class="btn primary wide">Masuk</button></form>
-{{if .Demo}}<div class="card demo"><h3>Server demo — pilih peran</h3><p class="muted small">Data di server ini fiktif dan bisa direset sewaktu-waktu.</p>
-{{range .Demo}}<form method="post" class="demorow"><input type="hidden" name="user" value="{{.ID}}"><input type="hidden" name="password" value="{{.Password}}"><input type="hidden" name="next" value="{{$.Next}}"><button class="btn">{{.Nama}}</button><span class="muted small">{{.Peran}}</span></form>{{end}}</div>{{end}}</div>{{end}}
+{{if .Demo}}<div class="card demo"><h3>Server demo — pilih peran</h3><p class="muted small">Data di server ini fiktif dan dapat direset sewaktu-waktu.</p>
+{{range .Demo}}<form method="post" class="demorow"><input type="hidden" name="user" value="{{.ID}}"><input type="hidden" name="password" value="{{.Password}}"><input type="hidden" name="next" value="{{$.Next}}"><button class="btn">{{icon "user"}}{{.Nama}}</button><span class="muted small">{{.Peran}}</span></form>{{end}}</div>{{end}}</div>{{end}}

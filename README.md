@@ -71,6 +71,17 @@ Aplikasi ini berupa satu file biner tanpa dependensi. Antarmukanya web, bisa dib
    - Login dengan peran: admin, pendaftaran, dokter, perawat, farmasi, lab, radiologi, ok (kamar operasi), gizi, kasir, keuangan, bpjs, manajemen.
    - Password bcrypt, sesi di database, token CSRF di setiap form, dan audit log.
 
+## Tampilan (INA Digital Design System)
+
+Antarmuka mengikuti [INA Digital Design System (IDDS)](https://design.inadigital.go.id), standar desain layanan digital pemerintah:
+- Token warna, radius, bayangan, dan spacing disalin dari paket resmi `@idds/react`. Font **Inter** dan ikon **Tabler** ditanam di biner, jadi tetap tampil tanpa internet.
+- Tema merek dipilih lewat `UI_BRAND` di `simrs.env`: `inagov` (bawaan, biru), `panrb`, `bkn`, `lan`, `bgn`, `inaku`, `inapas`, atau `netral`.
+- Komponen yang dipakai mengikuti pola IDDS: sidebar putih berkelompok, kartu ringkasan berikon, tombol primer/sekunder, text field dengan label di atas, tab, badge, alert, dan tabel.
+- Aksesibilitas: tautan "Lewati ke konten", fokus keyboard terlihat, `aria-current` di menu, `role="alert"` pada pesan galat, dan kontras warna mengikuti token IDDS.
+- Responsif: di layar kecil sidebar menjadi drawer.
+
+Aplikasi ini memakai CSS sendiri yang mengikuti token IDDS, bukan komponen React IDDS, karena antarmukanya dirender di server (Go `html/template`).
+
 ## Instalasi
 
 ```bash
@@ -137,6 +148,8 @@ Pengujian memakai database `sik_test`. Atur `SIMRS_TEST_DSN` atau siapkan user `
 - Bukan produk bersertifikat. Lakukan uji coba dan validasi sebelum dipakai untuk pelayanan nyata.
 
 ## Tangkapan layar
+
+![Dashboard](docs/dashboard.png)
 
 ![ERM](docs/erm.png)
 ![Registrasi](docs/registrasi.png)

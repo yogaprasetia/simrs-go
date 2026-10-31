@@ -1,17 +1,17 @@
-{{define "content"}}<h1>Dashboard <small>{{tgl .Today}}</small></h1>
+{{define "content"}}<h1>Dashboard <small>Ringkasan pelayanan {{tgl .Today}}</small></h1>
 <div class="stats">
-<a class="stat" href="{{.P}}/registrasi"><b>{{.Kunjungan}}</b>Kunjungan hari ini</a>
-<a class="stat" href="{{.P}}/ralan"><b>{{.BelumPeriksa}}</b>Belum diperiksa</a>
-<a class="stat" href="{{.P}}/ranap"><b>{{.Ranap}} / {{.Bed}}</b>Pasien rawat inap / bed</a>
-<a class="stat" href="{{.P}}/farmasi"><b>{{.Resep}}</b>Resep menunggu</a>
-<a class="stat" href="{{.P}}/lab"><b>{{.Lab}}</b>Order lab menunggu</a>
-<a class="stat" href="{{.P}}/radiologi"><b>{{.Rad}}</b>Order radiologi menunggu</a>
-<a class="stat" href="{{.P}}/operasi"><b>{{.OK}}</b>Jadwal operasi hari ini</a>
-<a class="stat" href="{{.P}}/kasir"><b>{{.BelumBayar}}</b>Belum bayar (30 hr)</a>
-<div class="stat"><b>{{rp .Pendapatan}}</b>Pendapatan kasir hari ini</div>
+<a class="stat" href="{{.P}}/registrasi"><span class="tile t-blue">{{icon "registrasi"}}</span><span class="lbl2">Kunjungan hari ini</span><b>{{.Kunjungan}}</b></a>
+<a class="stat" href="{{.P}}/ralan"><span class="tile t-orange">{{icon "ralan"}}</span><span class="lbl2">Belum diperiksa</span><b>{{.BelumPeriksa}}</b></a>
+<a class="stat" href="{{.P}}/ranap"><span class="tile">{{icon "ranap"}}</span><span class="lbl2">Rawat inap / bed</span><b>{{.Ranap}} / {{.Bed}}</b></a>
+<a class="stat" href="{{.P}}/farmasi"><span class="tile t-green">{{icon "farmasi"}}</span><span class="lbl2">Resep menunggu</span><b>{{.Resep}}</b></a>
+<a class="stat" href="{{.P}}/lab"><span class="tile t-blue">{{icon "lab"}}</span><span class="lbl2">Order lab menunggu</span><b>{{.Lab}}</b></a>
+<a class="stat" href="{{.P}}/radiologi"><span class="tile t-dark">{{icon "radiologi"}}</span><span class="lbl2">Order radiologi menunggu</span><b>{{.Rad}}</b></a>
+<a class="stat" href="{{.P}}/operasi"><span class="tile t-red">{{icon "operasi"}}</span><span class="lbl2">Jadwal operasi hari ini</span><b>{{.OK}}</b></a>
+<a class="stat" href="{{.P}}/kasir"><span class="tile t-orange">{{icon "kasir"}}</span><span class="lbl2">Belum bayar (30 hari)</span><b>{{.BelumBayar}}</b></a>
+<div class="stat"><span class="tile t-green">{{icon "money"}}</span><span class="lbl2">Pendapatan kasir hari ini</span><b>{{rp .Pendapatan}}</b></div>
 </div>
 <div class="grid2">
-<div class="card"><h3>Kunjungan per poli</h3><table><tr><th>Poli</th><th class="r">Jumlah</th><th class="r">Belum</th></tr>
+<div class="card"><h3>Kunjungan per poli</h3><table><tr><th>Poli</th><th class="r">Jumlah</th><th class="r">Belum diperiksa</th></tr>
 {{range .PerPoli}}<tr><td>{{.nm_poli}}</td><td class="r">{{.jml}}</td><td class="r">{{.belum}}</td></tr>{{else}}<tr><td colspan="3" class="muted">Belum ada kunjungan</td></tr>{{end}}</table></div>
-<div class="card"><h3>Cara bayar</h3><table>{{range .PerBayar}}<tr><td>{{.png_jawab}}</td><td class="r">{{.jml}}</td></tr>{{else}}<tr><td class="muted">-</td></tr>{{end}}</table></div>
+<div class="card"><h3>Cara bayar</h3><table><tr><th>Penjamin</th><th class="r">Kunjungan</th></tr>{{range .PerBayar}}<tr><td>{{.png_jawab}}</td><td class="r">{{.jml}}</td></tr>{{else}}<tr><td class="muted" colspan="2">Belum ada kunjungan</td></tr>{{end}}</table></div>
 </div>{{end}}

@@ -1,6 +1,6 @@
 {{define "content"}}{{$b := .B}}{{$r := $b.Reg}}<h1>Billing {{if $b.Ranap}}Rawat Inap{{else}}Rawat Jalan{{end}}</h1>
 <div class="card info">{{$r.NoRawat}} · {{$r.NoRM}} <b>{{$r.Nama}}</b> · {{$r.NmPoli}} · {{$r.NmDokter}} · <b>{{$r.PngJawab}}</b>{{if .SEP}} · SEP {{.SEP}}{{end}}</div>
-{{if ne .Pending "0"}}<div class="alert">Masih ada {{.Pending}} resep/lab/radiologi/operasi yang belum selesai — pembayaran belum bisa disimpan.</div>{{end}}
+{{if ne .Pending "0"}}<div class="alert">{{icon "info"}}<span>Masih ada {{.Pending}} resep/lab/radiologi/operasi yang belum selesai — pembayaran belum bisa disimpan.</span></div>{{end}}
 <table class="list"><tr><th>Kelompok</th><th>Uraian</th><th class="r">Biaya</th><th class="r">Jml</th><th class="r">Total</th></tr>
 {{range $b.Items}}<tr><td>{{.Status}}</td><td>{{.Nama}}</td><td class="r">{{rp .Biaya}}</td><td class="r">{{num .Jml}}</td><td class="r">{{rp .Total}}</td></tr>{{end}}
 <tr class="total"><th colspan="4">TOTAL TAGIHAN</th><th class="r">{{rp $b.Total}}</th></tr></table>

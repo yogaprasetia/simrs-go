@@ -1,5 +1,5 @@
 {{define "content"}}{{$p := .P_}}<h1>{{.Title}}</h1>
-{{if .Err}}<div class="flash err">{{.Err}}</div>{{end}}
+
 <form method="post" action="{{.P}}/pasien/simpan" class="card form">{{template "csrf" .}}
 <input type="hidden" name="no_rkm_medis" value="{{$p.no_rkm_medis}}"><input type="hidden" name="next" value="{{.Next}}">
 <div class="g3">

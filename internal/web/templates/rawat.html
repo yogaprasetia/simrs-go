@@ -1,7 +1,7 @@
 {{define "content"}}{{$r := .R}}{{$lock := .Locked}}
 <div class="phead"><div><h1>{{$r.Nama}} <small>RM {{$r.NoRM}}</small></h1>
 <div class="muted">{{$r.NoRawat}} · {{$r.JK}} · {{$r.Umur}} · {{$r.NmPoli}} · {{$r.NmDokter}} · {{$r.PngJawab}} · <b>{{$r.StatusLanjut}}</b>{{range .DPJP}} · DPJP {{.nm_dokter}}{{end}}</div>
-{{if .Alergi}}<div class="alert">⚠ Alergi: {{.Alergi}}</div>{{end}}</div>
+{{if .Alergi}}<div class="alert" role="alert">{{icon "alert"}}<span><b>Alergi:</b> {{.Alergi}}</span></div>{{end}}</div>
 <div class="right">{{if $lock}}<span class="tag big">{{if eq2 $r.Stts "Batal"}}BATAL{{else}}SUDAH BAYAR — terkunci{{end}}</span>{{end}}
 {{if has .User "kasir"}}<a class="btn" href="{{.P}}/kasir/billing?no={{$r.NoRawat}}">Billing</a>{{end}}</div></div>
 <div class="tabs">{{range split "soap:SOAP / CPPT,diagnosa:Diagnosa & Prosedur,tindakan:Tindakan,resep:Resep,lab:Laboratorium,radiologi:Radiologi,operasi:Operasi / VK,kamar:Kamar / Ranap,riwayat:Riwayat" ","}}{{$kv := split . ":"}}<a href="?no={{$r.NoRawat}}&tab={{index $kv 0}}" class="{{if eq2 $.Tab (index $kv 0)}}on{{end}}">{{index $kv 1}}</a>{{end}}</div>

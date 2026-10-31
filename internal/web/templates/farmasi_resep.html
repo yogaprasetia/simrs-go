@@ -1,6 +1,6 @@
 {{define "content"}}{{$o := .O}}<h1>Resep {{$o.no_resep}} {{if not .Print}}<a class="btn" href="?no={{$o.no_resep}}&cetak=1" target="_blank">Cetak etiket</a>{{end}}</h1>
 <div class="card info">{{$o.no_rkm_medis}} <b>{{$o.nm_pasien}}</b> · lahir {{tgl $o.tgl_lahir}} · {{$o.no_rawat}} · {{$o.nm_dokter}} · {{$o.png_jawab}} · {{$o.status}}</div>
-{{if .Alergi}}<div class="alert">⚠ Alergi: {{.Alergi}}</div>{{end}}
+{{if .Alergi}}<div class="alert" role="alert">{{icon "alert"}}<span><b>Alergi:</b> {{.Alergi}}</span></div>{{end}}
 <table class="list"><tr><th>Obat</th><th class="r">Jumlah</th><th>Aturan pakai</th><th class="r">Harga</th><th class="r">Subtotal</th><th class="r">Stok depo</th></tr>
 {{range .Items}}<tr><td>{{.nama_brng}}</td><td class="r">{{num .jml}} {{.kode_sat}}</td><td>{{.aturan_pakai}}</td><td class="r">{{rp .harga}}</td><td class="r">{{rp (mul .harga .jml)}}</td><td class="r {{if lt (toF .stok) (toF .jml)}}danger{{end}}">{{num .stok}}</td></tr>{{end}}
 <tr><th colspan="4">Perkiraan total</th><th class="r">{{rp .Total}}</th><th></th></tr></table>
