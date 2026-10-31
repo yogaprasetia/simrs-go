@@ -269,6 +269,7 @@ var menu = []MenuItem{
 	{"/lab", "Laboratorium", "🧪", []string{"lab"}},
 	{"/radiologi", "Radiologi", "🩻", []string{"radiologi"}},
 	{"/operasi", "Kamar Operasi / VK", "⚕", []string{"ok", "dokter", "perawat", "kasir"}},
+	{"/gizi", "Gizi", "🍲", []string{"gizi", "perawat"}},
 	{"/kasir", "Kasir", "💰", []string{"kasir"}},
 	{"/logistik", "Logistik Farmasi", "📦", []string{"farmasi"}},
 	{"/keuangan", "Keuangan & Akuntansi", "📒", []string{"keuangan", "manajemen"}},

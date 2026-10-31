@@ -67,7 +67,7 @@ func setup(t *testing.T) (*sql.DB, *httptest.Server, *bpjs.Mock, *logBuf) {
 	if err := db.Migrate(ctx, d, true); err != nil {
 		t.Fatal(err)
 	}
-	for _, u := range [][3]string{{"admin", "admin", ""}, {"daftar", "pendaftaran,bpjs", ""}, {"dr", "dokter", "D0000002"}, {"apt", "farmasi", ""}, {"lab", "lab", ""}, {"kasir", "kasir", ""}, {"mgr", "manajemen", ""}, {"prw", "perawat", ""}, {"rad", "radiologi", ""}, {"okp", "ok", ""}, {"drb", "dokter", "D0000006"}, {"keu", "keuangan", ""}} {
+	for _, u := range [][3]string{{"admin", "admin", ""}, {"daftar", "pendaftaran,bpjs", ""}, {"dr", "dokter", "D0000002"}, {"apt", "farmasi", ""}, {"lab", "lab", ""}, {"kasir", "kasir", ""}, {"mgr", "manajemen", ""}, {"prw", "perawat", ""}, {"rad", "radiologi", ""}, {"okp", "ok", ""}, {"drb", "dokter", "D0000006"}, {"keu", "keuangan", ""}, {"gz", "gizi", ""}} {
 		if err := db.UpsertUser(ctx, d, u[0], strings.ToUpper(u[0]), "rahasia123", u[1], u[2]); err != nil {
 			t.Fatal(err)
 		}
@@ -739,6 +739,47 @@ func TestWebLogistikKeuangan(t *testing.T) {
 	apt.crawl("/logistik?tab=penerimaan")
 	keu.crawl("/keuangan?tab=hutang")
 	mgr.crawl("/keuangan?tab=neracasaldo")
+	if l := lb.Take(); strings.Contains(l, "render") || strings.Contains(l, "query:") || strings.Contains(l, "scan:") || strings.Contains(l, "error GET") {
+		t.Fatalf("log error:\n%s", l)
+	}
+}
+
+func TestWebGizi(t *testing.T) {
+	d, ts, _, lb := setup(t)
+	defer ts.Close()
+	B := ts.URL
+	gz := login(t, B, "gz")
+	prw := login(t, B, "prw")
+	daf := login(t, B, "daftar")
+	login(t, B, "kasir").get("/gizi", 403)
+	daf.postOK("/pasien/simpan", url.Values{"nm_pasien": {"Inap"}, "jk": {"P"}, "tgl_lahir": {"1990-01-01"}, "kd_pj": {"A09"}})
+	daf.postOK("/registrasi", url.Values{"no_rkm_medis": {"000001"}, "kd_poli": {"IGDK"}, "kd_dokter": {"D0000001"}, "kd_pj": {"A09"}})
+	no := strings.ReplaceAll(core.Today(), "-", "/") + "/000001"
+	prw.postOK("/rawat/soap", url.Values{"no_rawat": {no}, "keluhan": {"lemas"}, "alergi": {"udang"}})
+	daf.postOK("/rawat/kamar-masuk", url.Values{"no_rawat": {no}, "kd_kamar": {"ANG.01"}, "diagnosa_awal": {"DM"}, "kd_dokter": {"D0000002"}})
+	body := gz.get("/gizi", 200)
+	if !strings.Contains(body, "1 belum punya diet") {
+		t.Fatal("pasien tanpa diet")
+	}
+	gz.postOK("/gizi/simpan", url.Values{"tab": {"pasien"}, "tgl": {core.Today()}, "no_rawat": {no}, "w_Pagi": {"D03"}, "w_Siang": {"D03"}, "w_Sore": {""}, "w_Malam": {"D03"}})
+	if n := q1(t, d, "SELECT COUNT(*) FROM detail_beri_diet"); n != "3" {
+		t.Fatalf("diet %s", n)
+	}
+	if !strings.Contains(gz.get("/gizi?tab=rekap", 200), "DM 1700") {
+		t.Fatal("rekap")
+	}
+	if !strings.Contains(gz.get("/gizi/etiket?tgl="+core.Today()+"&waktu=Pagi", 200), "INAP") {
+		t.Fatal("etiket")
+	}
+	besok := core.Now().AddDate(0, 0, 1).Format("2006-01-02")
+	prw.postOK("/gizi/salin", url.Values{"tab": {"pasien"}, "tgl": {besok}, "dari": {core.Today()}})
+	if n := q1(t, d, "SELECT COUNT(*) FROM detail_beri_diet WHERE tanggal=?", besok); n != "3" {
+		t.Fatalf("salin %s", n)
+	}
+	prw.postErr("/gizi/diet", url.Values{"tab": {"master"}, "kd_diet": {"D99"}, "nama_diet": {"X"}}, "ahli gizi")
+	gz.postOK("/gizi/diet", url.Values{"tab": {"master"}, "kd_diet": {"D99"}, "nama_diet": {"Diet Jantung"}})
+	gz.crawl("/gizi")
+	gz.crawl("/gizi?tab=rekap")
 	if l := lb.Take(); strings.Contains(l, "render") || strings.Contains(l, "query:") || strings.Contains(l, "scan:") || strings.Contains(l, "error GET") {
 		t.Fatalf("log error:\n%s", l)
 	}

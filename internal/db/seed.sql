@@ -220,3 +220,8 @@ INSERT IGNORE INTO app_set_akun VALUES
 ('Pendapatan_Obat','410700',''),('Pendapatan_Kamar','410800',''),('Pendapatan_Tambahan','410900',''),
 ('HPP_Obat','510100','Harga pokok obat yang diberikan ke pasien'),('Diskon_Piutang','520100',''),
 ('Piutang_Tidak_Terbayar','520200',''),('Selisih_Opname','520300','');
+
+
+INSERT IGNORE INTO diet VALUES ('D01','Nasi Biasa'),('D02','TKTP (Tinggi Kalori Tinggi Protein)'),('D03','DM 1700 kkal'),('D04','Rendah Garam II'),
+('D05','Lunak (Nasi Tim)'),('D06','Bubur Saring'),('D07','Cair / Sonde'),('D08','Rendah Protein'),('D09','Rendah Lemak'),('D10','Diet Anak');
+INSERT IGNORE INTO jam_diet_pasien VALUES ('Pagi','06:30'),('Pagi2','09:30'),('Siang','11:30'),('Siang2','14:30'),('Sore','16:30'),('Malam','19:30');

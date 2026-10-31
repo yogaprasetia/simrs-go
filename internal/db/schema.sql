@@ -1101,3 +1101,25 @@ CREATE TABLE IF NOT EXISTS bayar_piutang (
   kd_rek_tidak_terbayar varchar(15) DEFAULT '',
   KEY idx_rawat (no_rawat)
 );
+
+
+-- ===================================================== gizi
+CREATE TABLE IF NOT EXISTS diet (
+  kd_diet varchar(3) NOT NULL PRIMARY KEY,
+  nama_diet varchar(50) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS jam_diet_pasien (
+  waktu enum('Pagi','Pagi2','Pagi3','Siang','Siang2','Siang3','Sore','Sore2','Sore3','Malam','Malam2','Malam3') NOT NULL PRIMARY KEY,
+  jam char(5) NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS detail_beri_diet (
+  no_rawat varchar(17) NOT NULL,
+  kd_kamar varchar(15) NOT NULL,
+  tanggal date NOT NULL,
+  waktu enum('Pagi','Pagi2','Pagi3','Siang','Siang2','Siang3','Sore','Sore2','Sore3','Malam','Malam2','Malam3') NOT NULL,
+  kd_diet varchar(3) NOT NULL,
+  PRIMARY KEY (no_rawat, kd_kamar, tanggal, waktu, kd_diet),
+  KEY idx_tgl (tanggal, waktu)
+);

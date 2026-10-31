@@ -1,0 +1,22 @@
+{{define "content"}}<h1>Gizi <form class="inline"><input type="hidden" name="tab" value="{{.Tab}}"><input type="date" name="tgl" value="{{.Tgl}}" onchange="this.form.submit()"></form>
+<a class="btn" href="?tgl={{.Kemarin}}&tab={{.Tab}}">‹</a><a class="btn" href="?tgl={{.Besok}}&tab={{.Tab}}">›</a></h1>
+<div class="tabs"><a href="?tgl={{.Tgl}}&tab=pasien" class="{{if eq .Tab "pasien"}}on{{end}}">Diet pasien</a><a href="?tgl={{.Tgl}}&tab=rekap" class="{{if eq .Tab "rekap"}}on{{end}}">Rekap dapur & etiket</a><a href="?tgl={{.Tgl}}&tab=master" class="{{if eq .Tab "master"}}on{{end}}">Master diet</a></div>
+{{if eq .Tab "pasien"}}
+<div class="card info">{{len .Pasien}} pasien rawat inap pada {{tgl .Tgl}}{{if .Belum}} · <b class="danger">{{.Belum}} belum punya diet</b>{{end}}
+<form method="post" action="{{.P}}/gizi/salin" class="inline">{{template "csrf" .}}<input type="hidden" name="tab" value="pasien"><input type="hidden" name="tgl" value="{{.Tgl}}"><input type="hidden" name="dari" value="{{.Kemarin}}"><button class="btn">Salin diet dari {{tgl .Kemarin}}</button></form></div>
+<table class="list"><tr><th>Kamar</th><th>Pasien</th><th>Diagnosa / alergi</th>{{range .Waktu}}<th>{{.waktu}} <small>{{.jam}}</small></th>{{end}}<th></th></tr>
+{{range $p := .Pasien}}{{$s := index $.Set $p.no_rawat}}<tr class="{{if not $s}}warnrow{{end}}"><td>{{$p.kd_kamar}}<br><small>{{$p.nm_bangsal}} · {{$p.kelas}}</small></td><td>{{$p.no_rkm_medis}} <b>{{$p.nm_pasien}}</b><br><small>{{$p.jk}} · {{$p.umur}}</small></td>
+<td>{{$p.diagnosa_awal}}{{if $p.alergi}}<br><span class="danger small">⚠ {{$p.alergi}}</span>{{end}}</td>
+{{range $.Waktu}}<td><select name="w_{{.waktu}}" form="f{{$p.no_rawat}}" class="dietsel"><option value="">—</option>{{$cur := index $s .waktu}}{{range $.Diet}}<option value="{{.kd_diet}}" {{if eq2 $cur .kd_diet}}selected{{end}}>{{.nama_diet}}</option>{{end}}</select></td>{{end}}
+<td><form method="post" action="{{$.P}}/gizi/simpan" id="f{{$p.no_rawat}}">{{template "csrf" $}}<input type="hidden" name="tab" value="pasien"><input type="hidden" name="tgl" value="{{$.Tgl}}"><input type="hidden" name="no_rawat" value="{{$p.no_rawat}}"><button class="btn">Simpan</button></form></td></tr>
+{{else}}<tr><td colspan="9" class="muted">Tidak ada pasien rawat inap</td></tr>{{end}}</table>
+{{end}}
+{{if eq .Tab "rekap"}}
+<div class="bar">Cetak etiket: {{range .Waktu}}<a class="btn" target="_blank" href="{{$.P}}/gizi/etiket?tgl={{$.Tgl}}&waktu={{.waktu}}">{{.waktu}} {{.jam}}</a>{{end}}</div>
+<table class="list"><tr><th>Waktu</th><th>Diet</th><th>Bangsal</th><th class="r">Porsi</th></tr>{{range .Rekap}}<tr><td>{{.waktu}} {{.jam}}</td><td>{{.nama_diet}}</td><td>{{.nm_bangsal}}</td><td class="r"><b>{{.jml}}</b></td></tr>{{else}}<tr><td colspan="4" class="muted">Belum ada diet pada tanggal ini</td></tr>{{end}}</table>
+{{end}}
+{{if eq .Tab "master"}}
+{{if has .User "gizi"}}<form method="post" action="{{.P}}/gizi/diet" class="card form inlineform">{{template "csrf" .}}<input type="hidden" name="tab" value="master"><input type="hidden" name="tgl" value="{{.Tgl}}"><label>Kode<input name="kd_diet" maxlength="3" required></label><label>Nama diet<input name="nama_diet" required></label><button class="btn primary">Simpan</button></form>{{end}}
+<div class="grid2"><table class="list"><tr><th>Kode</th><th>Diet</th></tr>{{range .Diet}}<tr><td>{{.kd_diet}}</td><td>{{.nama_diet}}</td></tr>{{end}}</table>
+<table class="list"><tr><th>Waktu makan</th><th>Jam</th></tr>{{range .Waktu}}<tr><td>{{.waktu}}</td><td>{{.jam}}</td></tr>{{end}}</table></div>
+{{end}}{{end}}

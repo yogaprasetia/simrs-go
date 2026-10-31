@@ -1,0 +1,2 @@
+{{define "content"}}<div class="noprint bar"><b>Etiket diet {{.WaktuSel}} · {{tgl .Tgl}}</b> <button class="btn" onclick="print()">Cetak</button></div>
+<div class="etiket">{{range .List}}<div class="et"><b>{{$.Instansi}}</b><br><big><b>{{.nm_pasien}}</b></big><br>RM {{.no_rkm_medis}} · lahir {{tgl .tgl_lahir}}<br>{{.nm_bangsal}} · {{.kd_kamar}}<br><big>{{.nama_diet}}</big><br><small>{{.waktu}} {{.jam}} · {{tgl .tanggal}}</small></div>{{else}}<p class="muted">Tidak ada diet untuk waktu ini.</p>{{end}}</div>{{end}}

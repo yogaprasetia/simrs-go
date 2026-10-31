@@ -60,3 +60,4 @@ body.print{background:#fff}.paper,.slip{max-width:800px;margin:auto}.slip{max-wi
 h1 .btn{font-size:14px;font-weight:500}
 .beli input{margin:0}.payform{display:flex;gap:4px;flex-wrap:wrap}.payform input,.payform select{margin:0;width:110px}.payform input[name=catatan],.payform input[name=no_bukti]{width:140px}
 tr.jh td{background:#f6f8fa;border-top:2px solid var(--line)}td.indent{padding-left:32px}tr.sel td{background:#f0fdfa}
+.dietsel{min-width:120px;margin:0;font-size:12px}
