@@ -913,3 +913,191 @@ CREATE TABLE IF NOT EXISTS app_satusehat_error (
   pesan varchar(1000) NOT NULL,
   waktu datetime NOT NULL
 );
+
+
+-- ===================================================== logistik farmasi (pengadaan)
+CREATE TABLE IF NOT EXISTS datasuplier (
+  kode_suplier char(5) NOT NULL PRIMARY KEY,
+  nama_suplier varchar(50) NOT NULL,
+  alamat varchar(50) DEFAULT '',
+  kota varchar(20) DEFAULT '',
+  no_telp varchar(13) DEFAULT '',
+  nama_bank varchar(30) DEFAULT '',
+  rekening varchar(20) DEFAULT ''
+);
+
+CREATE TABLE IF NOT EXISTS surat_pemesanan_medis (
+  no_pemesanan varchar(20) NOT NULL PRIMARY KEY,
+  kode_suplier char(5) NOT NULL,
+  nip varchar(20) NOT NULL,
+  tanggal date NOT NULL,
+  total1 double NOT NULL DEFAULT 0,
+  potongan double NOT NULL DEFAULT 0,
+  total2 double NOT NULL DEFAULT 0,
+  ppn double NOT NULL DEFAULT 0,
+  meterai double NOT NULL DEFAULT 0,
+  tagihan double NOT NULL DEFAULT 0,
+  status enum('Proses Pesan','Sudah Datang') NOT NULL DEFAULT 'Proses Pesan'
+);
+
+CREATE TABLE IF NOT EXISTS detail_surat_pemesanan_medis (
+  no_pemesanan varchar(20) NOT NULL,
+  kode_brng varchar(15) NOT NULL,
+  kode_sat char(4) NOT NULL,
+  jumlah double NOT NULL,
+  h_pesan double NOT NULL,
+  subtotal double NOT NULL,
+  dis double NOT NULL DEFAULT 0,
+  besardis double NOT NULL DEFAULT 0,
+  total double NOT NULL,
+  jumlah2 double NOT NULL DEFAULT 0,
+  PRIMARY KEY (no_pemesanan, kode_brng)
+);
+
+CREATE TABLE IF NOT EXISTS pemesanan (
+  no_faktur varchar(20) NOT NULL PRIMARY KEY,
+  no_order varchar(20) DEFAULT '',
+  kode_suplier char(5) NOT NULL,
+  nip varchar(20) NOT NULL,
+  tgl_pesan date NOT NULL,
+  tgl_faktur date NOT NULL,
+  tgl_tempo date NOT NULL,
+  total1 double NOT NULL DEFAULT 0,
+  potongan double NOT NULL DEFAULT 0,
+  total2 double NOT NULL DEFAULT 0,
+  ppn double NOT NULL DEFAULT 0,
+  meterai double NOT NULL DEFAULT 0,
+  tagihan double NOT NULL DEFAULT 0,
+  kd_bangsal char(5) NOT NULL,
+  status enum('Sudah Dibayar','Belum Dibayar','Belum Lunas') NOT NULL DEFAULT 'Belum Dibayar',
+  KEY idx_tempo (tgl_tempo)
+);
+
+CREATE TABLE IF NOT EXISTS detailpesan (
+  no_faktur varchar(20) NOT NULL,
+  kode_brng varchar(15) NOT NULL,
+  kode_sat char(4) NOT NULL,
+  jumlah double NOT NULL,
+  h_pesan double NOT NULL,
+  subtotal double NOT NULL,
+  dis double NOT NULL DEFAULT 0,
+  besardis double NOT NULL DEFAULT 0,
+  total double NOT NULL,
+  no_batch varchar(20) NOT NULL DEFAULT '',
+  jumlah2 double NOT NULL DEFAULT 0,
+  kadaluarsa date DEFAULT NULL,
+  PRIMARY KEY (no_faktur, kode_brng, no_batch)
+);
+
+CREATE TABLE IF NOT EXISTS bayar_pemesanan (
+  tgl_bayar date NOT NULL,
+  no_faktur varchar(20) NOT NULL,
+  nip varchar(20) NOT NULL,
+  besar_bayar double NOT NULL,
+  keterangan varchar(100) DEFAULT '',
+  nama_bayar varchar(50) NOT NULL,
+  no_bukti varchar(30) NOT NULL DEFAULT '',
+  KEY idx_faktur (no_faktur)
+);
+
+CREATE TABLE IF NOT EXISTS mutasibarang (
+  kode_brng varchar(15) NOT NULL,
+  jml double NOT NULL,
+  harga double NOT NULL DEFAULT 0,
+  kd_bangsaldari char(5) NOT NULL,
+  kd_bangsalke char(5) NOT NULL,
+  tanggal datetime NOT NULL,
+  keterangan varchar(60) DEFAULT '',
+  no_batch varchar(20) NOT NULL DEFAULT '',
+  no_faktur varchar(20) NOT NULL DEFAULT '',
+  KEY idx_tgl (tanggal)
+);
+
+CREATE TABLE IF NOT EXISTS opname (
+  kode_brng varchar(15) NOT NULL,
+  h_beli double NOT NULL DEFAULT 0,
+  tanggal date NOT NULL,
+  stok double NOT NULL,
+  `real` double NOT NULL,
+  selisih double NOT NULL,
+  nomihilang double NOT NULL DEFAULT 0,
+  lebih double NOT NULL DEFAULT 0,
+  nomilebih double NOT NULL DEFAULT 0,
+  keterangan varchar(60) DEFAULT '',
+  kd_bangsal char(5) NOT NULL,
+  no_batch varchar(20) NOT NULL DEFAULT '',
+  no_faktur varchar(20) NOT NULL DEFAULT '',
+  PRIMARY KEY (kode_brng, tanggal, kd_bangsal, no_batch, no_faktur)
+);
+
+-- ===================================================== keuangan & akuntansi
+CREATE TABLE IF NOT EXISTS rekening (
+  kd_rek varchar(15) NOT NULL PRIMARY KEY,
+  nm_rek varchar(100) NOT NULL,
+  tipe enum('N','M','R') NOT NULL,
+  balance enum('D','K') NOT NULL,
+  level enum('0','1') NOT NULL DEFAULT '0'
+);
+
+CREATE TABLE IF NOT EXISTS jurnal (
+  no_jurnal varchar(20) NOT NULL PRIMARY KEY,
+  no_bukti varchar(30) DEFAULT '',
+  tgl_jurnal date NOT NULL,
+  jam_jurnal time NOT NULL,
+  jenis enum('U','P') NOT NULL DEFAULT 'U',
+  keterangan varchar(350) DEFAULT '',
+  KEY idx_tgl (tgl_jurnal),
+  KEY idx_bukti (no_bukti)
+);
+
+CREATE TABLE IF NOT EXISTS detailjurnal (
+  no_jurnal varchar(20) NOT NULL,
+  kd_rek varchar(15) NOT NULL,
+  debet double NOT NULL DEFAULT 0,
+  kredit double NOT NULL DEFAULT 0,
+  KEY idx_jurnal (no_jurnal),
+  KEY idx_rek (kd_rek)
+);
+
+-- pemetaan transaksi -> akun (versi ringkas dari set_akun Khanza)
+CREATE TABLE IF NOT EXISTS app_set_akun (
+  nama varchar(40) NOT NULL PRIMARY KEY,
+  kd_rek varchar(15) NOT NULL,
+  keterangan varchar(100) DEFAULT ''
+);
+
+CREATE TABLE IF NOT EXISTS piutang_pasien (
+  no_rawat varchar(17) NOT NULL PRIMARY KEY,
+  tgl_piutang date NOT NULL,
+  no_rkm_medis varchar(15) NOT NULL,
+  status enum('Lunas','Belum Lunas') NOT NULL DEFAULT 'Belum Lunas',
+  totalpiutang double NOT NULL,
+  uangmuka double NOT NULL DEFAULT 0,
+  sisapiutang double NOT NULL,
+  tgltempo date NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS detail_piutang_pasien (
+  no_rawat varchar(17) NOT NULL,
+  nama_bayar varchar(50) NOT NULL,
+  kd_pj char(3) NOT NULL,
+  totalpiutang double NOT NULL,
+  sisapiutang double NOT NULL,
+  tgltempo date NOT NULL,
+  PRIMARY KEY (no_rawat, nama_bayar)
+);
+
+CREATE TABLE IF NOT EXISTS bayar_piutang (
+  tgl_bayar date NOT NULL,
+  no_rkm_medis varchar(15) NOT NULL,
+  besar_cicilan double NOT NULL,
+  catatan varchar(100) DEFAULT '',
+  no_rawat varchar(17) NOT NULL,
+  kd_rek varchar(15) NOT NULL,
+  kd_rek_kontra varchar(15) NOT NULL,
+  diskon_piutang double NOT NULL DEFAULT 0,
+  kd_rek_diskon_piutang varchar(15) DEFAULT '',
+  tidak_terbayar double NOT NULL DEFAULT 0,
+  kd_rek_tidak_terbayar varchar(15) DEFAULT '',
+  KEY idx_rawat (no_rawat)
+);

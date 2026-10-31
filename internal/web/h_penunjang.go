@@ -72,11 +72,13 @@ func (s *Server) farmasiAksi(w http.ResponseWriter, r *http.Request) {
 		}
 	case "stok":
 		kode := strings.TrimSpace(strings.SplitN(r.FormValue("kode_brng"), " ", 2)[0])
-		jml, _ := strconv.ParseFloat(r.FormValue("jml"), 64)
-		ket := r.FormValue("keterangan")
-		err = s.tx(r, func(tx *sql.Tx) error { return stokOpname(ctx, tx, kode, jml, ket, u.ID) })
-		msg = "Stok " + kode + " diperbarui"
-		s.back(w, r, s.Prefix+"/farmasi/stok", err, msg)
+		real, _ := strconv.ParseFloat(r.FormValue("real"), 64)
+		var sel float64
+		err = s.tx(r, func(tx *sql.Tx) (e error) {
+			sel, e = core.StokOpname(ctx, tx, kode, "AP", real, r.FormValue("keterangan"), u.ID)
+			return
+		})
+		s.back(w, r, s.Prefix+"/farmasi/stok", err, "Opname "+kode+" tersimpan, selisih "+strconv.FormatFloat(sel, 'f', -1, 64))
 		return
 	default:
 		http.NotFound(w, r)
@@ -86,41 +88,6 @@ func (s *Server) farmasiAksi(w http.ResponseWriter, r *http.Request) {
 		s.audit(r, "", "farmasi_"+r.PathValue("aksi"), no, "")
 	}
 	s.back(w, r, s.Prefix+"/farmasi/resep?no="+no, err, msg)
-}
-
-// stokOpname: penerimaan (+) atau koreksi (-) stok depo AP.
-func stokOpname(ctx context.Context, tx *sql.Tx, kode string, jml float64, ket, petugas string) error {
-	if jml == 0 {
-		return errors.New("jumlah tidak boleh 0")
-	}
-	var awal float64
-	err := tx.QueryRowContext(ctx, "SELECT stok FROM gudangbarang WHERE kode_brng=? AND kd_bangsal='AP' AND no_batch='' AND no_faktur='' FOR UPDATE", kode).Scan(&awal)
-	if errors.Is(err, sql.ErrNoRows) {
-		var n int
-		tx.QueryRowContext(ctx, "SELECT COUNT(*) FROM databarang WHERE kode_brng=?", kode).Scan(&n)
-		if n == 0 {
-			return errors.New("obat tidak ditemukan")
-		}
-		if _, err = tx.ExecContext(ctx, "INSERT INTO gudangbarang (kode_brng,kd_bangsal,stok) VALUES (?, 'AP', 0)", kode); err != nil {
-			return err
-		}
-	} else if err != nil {
-		return err
-	}
-	if awal+jml < 0 {
-		return fmt.Errorf("stok tidak cukup (sisa %g)", awal)
-	}
-	if _, err = tx.ExecContext(ctx, "UPDATE gudangbarang SET stok=stok+? WHERE kode_brng=? AND kd_bangsal='AP' AND no_batch='' AND no_faktur=''", jml, kode); err != nil {
-		return err
-	}
-	masuk, keluar := jml, 0.0
-	pos := "Penerimaan"
-	if jml < 0 {
-		masuk, keluar, pos = 0, -jml, "Opname"
-	}
-	_, err = tx.ExecContext(ctx, "INSERT INTO riwayat_barang_medis (kode_brng,stok_awal,masuk,keluar,stok_akhir,posisi,tanggal,jam,petugas,kd_bangsal,keterangan) VALUES (?,?,?,?,?,?,?,?,?,'AP',?)",
-		kode, awal, masuk, keluar, awal+jml, pos, core.Today(), core.NowTime(), petugas, ket)
-	return err
 }
 
 func (s *Server) farmasiStok(w http.ResponseWriter, r *http.Request) {
@@ -255,15 +222,7 @@ func (s *Server) kasirAksi(w http.ResponseWriter, r *http.Request) {
 			s.back(w, r, "", errors.New("hanya admin yang boleh membatalkan pembayaran"), "")
 			return
 		}
-		err := s.tx(r, func(tx *sql.Tx) error {
-			for _, q := range []string{"DELETE FROM billing WHERE no_rawat=?", "DELETE FROM nota_jalan WHERE no_rawat=?", "DELETE FROM nota_inap WHERE no_rawat=?",
-				"UPDATE rawat_jl_dr SET stts_bayar='Belum' WHERE no_rawat=?", "UPDATE reg_periksa SET status_bayar='Belum Bayar' WHERE no_rawat=?"} {
-				if _, e := tx.ExecContext(r.Context(), q, no); e != nil {
-					return e
-				}
-			}
-			return nil
-		})
+		err := s.tx(r, func(tx *sql.Tx) error { return core.BatalBayar(r.Context(), tx, no) })
 		if err == nil {
 			s.audit(r, "", "kasir_batal", no, "")
 		}

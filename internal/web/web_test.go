@@ -67,7 +67,7 @@ func setup(t *testing.T) (*sql.DB, *httptest.Server, *bpjs.Mock, *logBuf) {
 	if err := db.Migrate(ctx, d, true); err != nil {
 		t.Fatal(err)
 	}
-	for _, u := range [][3]string{{"admin", "admin", ""}, {"daftar", "pendaftaran,bpjs", ""}, {"dr", "dokter", "D0000002"}, {"apt", "farmasi", ""}, {"lab", "lab", ""}, {"kasir", "kasir", ""}, {"mgr", "manajemen", ""}, {"prw", "perawat", ""}, {"rad", "radiologi", ""}, {"okp", "ok", ""}, {"drb", "dokter", "D0000006"}} {
+	for _, u := range [][3]string{{"admin", "admin", ""}, {"daftar", "pendaftaran,bpjs", ""}, {"dr", "dokter", "D0000002"}, {"apt", "farmasi", ""}, {"lab", "lab", ""}, {"kasir", "kasir", ""}, {"mgr", "manajemen", ""}, {"prw", "perawat", ""}, {"rad", "radiologi", ""}, {"okp", "ok", ""}, {"drb", "dokter", "D0000006"}, {"keu", "keuangan", ""}} {
 		if err := db.UpsertUser(ctx, d, u[0], strings.ToUpper(u[0]), "rahasia123", u[1], u[2]); err != nil {
 			t.Fatal(err)
 		}
@@ -314,7 +314,7 @@ func TestWebAlurLengkap(t *testing.T) {
 	apt.postOK("/farmasi/validasi", url.Values{"no_resep": {noResep}})
 	apt.postOK("/farmasi/serahkan", url.Values{"no_resep": {noResep}})
 	apt.get("/farmasi/resep?no="+noResep+"&cetak=1", 200)
-	apt.postOK("/farmasi/stok", url.Values{"kode_brng": {"B000009 OBH"}, "jml": {"20"}, "keterangan": {"Faktur 123"}})
+	apt.postOK("/farmasi/stok", url.Values{"kode_brng": {"B000009 OBH"}, "real": {"100"}, "keterangan": {"opname"}})
 	if s := q1(t, d, "SELECT stok FROM gudangbarang WHERE kode_brng='B000009'"); s != "100" {
 		t.Fatalf("stok OBH %s", s)
 	}
@@ -638,6 +638,107 @@ func TestWebSatuSehat(t *testing.T) {
 	}
 	daf.crawl("/satusehat")
 	daf.crawl("/satusehat?tab=mapping")
+	if l := lb.Take(); strings.Contains(l, "render") || strings.Contains(l, "query:") || strings.Contains(l, "scan:") || strings.Contains(l, "error GET") {
+		t.Fatalf("log error:\n%s", l)
+	}
+}
+
+func TestWebLogistikKeuangan(t *testing.T) {
+	d, ts, _, lb := setup(t)
+	defer ts.Close()
+	B := ts.URL
+	apt := login(t, B, "apt")
+	keu := login(t, B, "keu")
+	daf := login(t, B, "daftar")
+	dr := login(t, B, "dr")
+	ksr := login(t, B, "kasir")
+	mgr := login(t, B, "mgr")
+	ksr.get("/keuangan", 403)
+	keu.get("/logistik", 403)
+	for _, tab := range []string{"penerimaan", "sp", "mutasi", "opname", "kartu", "ed", "suplier"} {
+		apt.get("/logistik?tab="+tab, 200)
+	}
+	apt.postOK("/logistik/sp", url.Values{"kode_suplier": {"S0002"}, "ppn": {"11"}, "kode_brng": {"B000006 Amlodipine", "B000003", ""}, "jumlah": {"100", "50", ""}, "harga": {"300", "1000", ""}, "dis": {"", "5", ""}})
+	sp := q1(t, d, "SELECT no_pemesanan FROM surat_pemesanan_medis")
+	body := apt.get("/logistik?tab=penerimaan&sp="+sp, 200)
+	if !strings.Contains(body, "B000006") {
+		t.Fatal("item SP tidak terisi di form penerimaan")
+	}
+	apt.get("/logistik/sp?no="+sp, 200)
+	apt.postErr("/logistik/terima", url.Values{"no_faktur": {"F1"}, "no_order": {sp}, "kode_suplier": {"S0001"}, "kd_bangsal": {"GF"}, "tgl_faktur": {core.Today()}, "tgl_tempo": {core.Today()},
+		"kode_brng": {"B000006"}, "jumlah": {"100"}, "harga": {"300"}}, "berbeda")
+	tempo := core.Now().AddDate(0, 0, -1).Format("2006-01-02")
+	apt.postOK("/logistik/terima", url.Values{"no_faktur": {"INV/2026/77"}, "no_order": {sp}, "kode_suplier": {"S0002"}, "kd_bangsal": {"GF"}, "tgl_faktur": {core.Now().AddDate(0, 0, -40).Format("2006-01-02")}, "tgl_tempo": {tempo},
+		"ppn": {"11"}, "meterai": {"10000"}, "update_harga": {"1"},
+		"kode_brng": {"B000006 Amlodipine", "B000003"}, "jumlah": {"100", "50"}, "harga": {"300", "1000"}, "dis": {"0", "5"}, "no_batch": {"A1", "C1"}, "kadaluarsa": {core.Now().AddDate(0, 2, 0).Format("2006-01-02"), "2029-01-01"}})
+	// 30.000 + (50.000 - 2.500) = 77.500; PPN 8.525; meterai 10.000 -> 96.025
+	if tg := q1(t, d, "SELECT tagihan FROM pemesanan WHERE no_faktur='INV/2026/77'"); tg != "96025" {
+		t.Fatalf("tagihan %s", tg)
+	}
+	if !strings.Contains(apt.get("/logistik/faktur?no="+url.QueryEscape("INV/2026/77"), 200), "96.025") {
+		t.Fatal("faktur")
+	}
+	if !strings.Contains(apt.get("/logistik?tab=ed", 200), "A1") {
+		t.Fatal("peringatan kedaluwarsa")
+	}
+	apt.postOK("/logistik/mutasi", url.Values{"dari": {"GF"}, "ke": {"AP"}, "kode_brng": {"B000006", "B000003"}, "jumlah": {"60", "20"}})
+	apt.postErr("/logistik/mutasi", url.Values{"dari": {"GF"}, "ke": {"AP"}, "kode_brng": {"B000006"}, "jumlah": {"60"}}, "tidak cukup")
+	apt.postOK("/logistik/opname", url.Values{"kd_bangsal": {"GF"}, "kode_brng": {"B000006"}, "real": {"38"}, "keterangan": {"pecah"}})
+	if !strings.Contains(apt.get("/logistik?tab=kartu&kode_brng=B000006&bangsal=GF", 200), "Opname") {
+		t.Fatal("kartu stok")
+	}
+	apt.postOK("/logistik/suplier", url.Values{"kode_suplier": {"s0009"}, "nama_suplier": {"PT Baru"}})
+
+	// hutang
+	body = keu.get("/keuangan?tab=hutang", 200)
+	if !strings.Contains(body, "INV/2026/77") || !strings.Contains(body, "lewat") {
+		t.Fatal("hutang jatuh tempo")
+	}
+	keu.postErr("/keuangan/bayar-hutang", url.Values{"tab": {"hutang"}, "no_faktur": {"INV/2026/77"}, "besar": {"100000"}, "via": {"Bank"}}, "melebihi")
+	keu.postOK("/keuangan/bayar-hutang", url.Values{"tab": {"hutang"}, "no_faktur": {"INV/2026/77"}, "besar": {"96025"}, "via": {"Bank"}, "no_bukti": {"TRF77"}})
+
+	// piutang dari kasir BPJS
+	daf.postOK("/pasien/simpan", url.Values{"nm_pasien": {"Peserta"}, "jk": {"L"}, "tgl_lahir": {"1980-01-01"}, "kd_pj": {"BPJ"}, "no_peserta": {"0001234567890"}})
+	daf.postOK("/registrasi", url.Values{"no_rkm_medis": {"000001"}, "kd_poli": {"INT"}, "kd_dokter": {"D0000002"}, "kd_pj": {"BPJ"}})
+	no := strings.ReplaceAll(core.Today(), "-", "/") + "/000001"
+	dr.postOK("/rawat/soap", url.Values{"no_rawat": {no}, "keluhan": {"kontrol"}})
+	dr.postOK("/rawat/tindakan", url.Values{"no_rawat": {no}, "kd_jenis_prw": {"RJ002"}, "kd_dokter": {"D0000002"}})
+	ksr.postOK("/kasir/bayar", url.Values{"no_rawat": {no}})
+	body = keu.get("/keuangan?tab=piutang", 200)
+	if !strings.Contains(body, no) || !strings.Contains(body, "BPJS KESEHATAN") {
+		t.Fatal("piutang tidak tampil")
+	}
+	keu.postOK("/keuangan/bayar-piutang", url.Values{"tab": {"piutang"}, "no_rawat": {no}, "cicilan": {"100000"}, "hapus": {"5000"}, "via": {"Bank"}, "catatan": {"klaim"}})
+	if q1(t, d, "SELECT status FROM piutang_pasien") != "Lunas" {
+		t.Fatal("piutang belum lunas")
+	}
+	adm := login(t, B, "admin")
+	adm.postErr("/kasir/batal", url.Values{"no_rawat": {no}}, "cicilan")
+
+	// jurnal manual, rekening, setelan
+	keu.postOK("/keuangan/jurnal", url.Values{"tab": {"jurnal"}, "keterangan": {"Setoran modal awal"}, "kd_rek": {"111020 Bank", "310100 Modal"}, "debet": {"10000000", ""}, "kredit": {"", "10000000"}})
+	keu.postErr("/keuangan/jurnal", url.Values{"tab": {"jurnal"}, "keterangan": {"x"}, "kd_rek": {"111020", "310100"}, "debet": {"10", ""}, "kredit": {"", "9"}}, "tidak seimbang")
+	keu.postOK("/keuangan/rekening", url.Values{"tab": {"rekening"}, "kd_rek": {"530200"}, "nm_rek": {"Beban Gaji"}, "tipe": {"R"}, "balance": {"D"}})
+	keu.postOK("/keuangan/setelan", url.Values{"tab": {"setelan"}, "nama": {"Kas"}, "kd_rek": {"111010 Kas"}})
+	keu.postErr("/keuangan/setelan", url.Values{"tab": {"setelan"}, "nama": {"Kas"}, "kd_rek": {"999"}}, "tidak ada")
+	for _, tab := range []string{"jurnal", "bukubesar", "neracasaldo", "labarugi", "neraca", "rekening", "setelan", "piutang", "hutang"} {
+		mgr.get("/keuangan?tab="+tab+"&dari=2000-01-01&sampai=2100-01-01", 200)
+	}
+	if b := mgr.get("/keuangan?tab=neracasaldo&dari=2000-01-01&sampai=2100-01-01", 200); !strings.Contains(b, "seimbang</span>") || strings.Contains(b, "TIDAK SEIMBANG") {
+		t.Fatal("neraca saldo tidak seimbang")
+	}
+	if b := mgr.get("/keuangan?tab=neraca&dari=2000-01-01&sampai=2100-01-01", 200); !strings.Contains(b, "seimbang</span>") || strings.Contains(b, "tidak seimbang") {
+		t.Fatal("neraca tidak seimbang")
+	}
+	if b := mgr.get("/keuangan?tab=bukubesar&kd_rek=111020&dari=2000-01-01&sampai=2100-01-01", 200); !strings.Contains(b, "TRF77") {
+		t.Fatal("buku besar bank")
+	}
+	if resp, _ := mgr.c.PostForm(B+"/keuangan/jurnal", url.Values{"_csrf": {mgr.csrf}}); resp.StatusCode != 403 {
+		t.Fatal("manajemen tidak boleh input jurnal")
+	}
+	apt.crawl("/logistik?tab=penerimaan")
+	keu.crawl("/keuangan?tab=hutang")
+	mgr.crawl("/keuangan?tab=neracasaldo")
 	if l := lb.Take(); strings.Contains(l, "render") || strings.Contains(l, "query:") || strings.Contains(l, "scan:") || strings.Contains(l, "error GET") {
 		t.Fatalf("log error:\n%s", l)
 	}

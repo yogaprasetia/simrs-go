@@ -572,6 +572,19 @@ func ValidasiResep(ctx context.Context, tx *sql.Tx, noResep, petugas string) err
 			return err
 		}
 	}
+	var hpp float64
+	for _, x := range list {
+		hpp += x.hb * x.jml
+	}
+	if hpp > 0 {
+		ak, err := mustAkun(ctx, tx, "HPP_Obat", "Persediaan_Obat")
+		if err != nil {
+			return err
+		}
+		if _, err := PostJurnal(ctx, tx, noResep, "U", "HPP obat resep "+noResep+" "+noRawat, []Baris{{KdRek: ak["HPP_Obat"], Debet: hpp}, {KdRek: ak["Persediaan_Obat"], Kredit: hpp}}); err != nil {
+			return err
+		}
+	}
 	_, err = tx.ExecContext(ctx, "UPDATE resep_obat SET tgl_perawatan=?, jam=? WHERE no_resep=?", tgl, jam, noResep)
 	return err
 }
@@ -990,6 +1003,9 @@ func BayarBilling(ctx context.Context, tx *sql.Tx, noRawat string) (string, erro
 		return "", err
 	}
 	if _, err = tx.ExecContext(ctx, "INSERT INTO "+table+" (no_rawat,no_nota,tanggal,jam) VALUES (?,?,?,?)", noRawat, nota, tgl, NowTime()); err != nil {
+		return "", err
+	}
+	if err = postKasir(ctx, tx, r, b, nota); err != nil {
 		return "", err
 	}
 	if _, err = tx.ExecContext(ctx, "UPDATE rawat_jl_dr SET stts_bayar='Sudah' WHERE no_rawat=?", noRawat); err != nil {

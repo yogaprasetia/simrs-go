@@ -1,0 +1,75 @@
+{{define "content"}}<h1>Keuangan & Akuntansi</h1>
+<div class="tabs">{{range split "piutang:Piutang pasien,hutang:Hutang supplier,jurnal:Jurnal,bukubesar:Buku besar,neracasaldo:Neraca saldo,labarugi:Laba rugi,neraca:Neraca,rekening:Rekening,setelan:Setelan akun" ","}}{{$kv := split . ":"}}<a href="?tab={{index $kv 0}}&dari={{$.Dari}}&sampai={{$.Sampai}}" class="{{if eq2 $.Tab (index $kv 0)}}on{{end}}">{{index $kv 1}}</a>{{end}}</div>
+{{$keu := has .User "keuangan"}}
+<datalist id="rek">{{range .Rek}}<option value="{{.kd_rek}} {{.nm_rek}}">{{end}}</datalist>
+
+{{if eq .Tab "piutang"}}
+<div class="stats">{{with .Aging}}<div class="stat"><b>{{rp (index . "0–30")}}</b>Umur 0–30 hari</div><div class="stat"><b>{{rp (index . "31–60")}}</b>31–60 hari</div><div class="stat"><b>{{rp (index . "61–90")}}</b>61–90 hari</div><div class="stat"><b>{{rp (index . ">90")}}</b>&gt; 90 hari</div><div class="stat"><b>{{rp (index . "Total")}}</b>Total sisa piutang</div>{{end}}</div>
+<div class="card"><h3>Per penjamin</h3><table>{{range .PerPJ}}<tr><td>{{.nama_bayar}}</td><td class="r">{{.jml}} kunjungan</td><td class="r">{{rp .sisa}}</td></tr>{{else}}<tr><td class="muted">Tidak ada piutang</td></tr>{{end}}</table></div>
+<form class="bar"><input type="hidden" name="tab" value="piutang"><select name="st" onchange="this.form.submit()"><option {{if eq .St "Belum Lunas"}}selected{{end}}>Belum Lunas</option><option {{if eq .St "Lunas"}}selected{{end}}>Lunas</option></select></form>
+<table class="list"><tr><th>No. rawat</th><th>Tanggal</th><th>Pasien</th><th>Penjamin</th><th class="r">Total</th><th class="r">Sisa</th><th>Umur</th><th></th></tr>
+{{range .List}}<tr class="{{if eq2 $.NoSel .no_rawat}}sel{{end}}"><td><a href="?tab=piutang&st={{$.St}}&no={{.no_rawat}}">{{.no_rawat}}</a>{{if .no_sep}}<br><small class="muted">SEP {{.no_sep}}</small>{{end}}</td><td>{{tgl .tgl_piutang}}</td><td>{{.no_rkm_medis}} {{.nm_pasien}}<br><small>{{.status_lanjut}}</small></td><td>{{.nama_bayar}}</td><td class="r">{{rp .totalpiutang}}</td><td class="r"><b>{{rp .sisapiutang}}</b></td><td>{{.umur}} hari</td>
+<td>{{if and $keu (eq2 .status "Belum Lunas")}}<form method="post" action="{{$.P}}/keuangan/bayar-piutang" class="payform">{{template "csrf" $}}<input type="hidden" name="tab" value="piutang"><input type="hidden" name="no_rawat" value="{{.no_rawat}}">
+<input name="cicilan" type="number" step="any" min="0" placeholder="Diterima" value="{{.sisapiutang}}"><input name="diskon" type="number" step="any" min="0" placeholder="Diskon"><input name="hapus" type="number" step="any" min="0" placeholder="Tak tertagih"><select name="via"><option>Bank</option><option>Kas</option></select><input name="catatan" placeholder="Catatan"><button class="btn">Bayar</button></form>{{end}}</td></tr>
+{{else}}<tr><td colspan="8" class="muted">Tidak ada</td></tr>{{end}}</table>
+{{with .Riwayat}}<h2>Riwayat pembayaran {{$.NoSel}}</h2><table class="list"><tr><th>Tanggal</th><th class="r">Diterima</th><th class="r">Diskon</th><th class="r">Tak tertagih</th><th>Akun</th><th>Catatan</th></tr>{{range .}}<tr><td>{{tgl .tgl_bayar}}</td><td class="r">{{rp .besar_cicilan}}</td><td class="r">{{rp .diskon_piutang}}</td><td class="r">{{rp .tidak_terbayar}}</td><td>{{.kd_rek}}</td><td>{{.catatan}}</td></tr>{{end}}</table>{{end}}
+{{end}}
+
+{{if eq .Tab "hutang"}}
+<table class="list"><tr><th>No. faktur</th><th>Supplier</th><th>Jatuh tempo</th><th class="r">Tagihan</th><th class="r">Sisa</th><th></th></tr>
+{{range .List}}<tr class="{{if lt (toF .hari) 0.0}}warnrow{{end}}"><td><a href="{{$.P}}/logistik/faktur?no={{.no_faktur}}">{{.no_faktur}}</a></td><td>{{.nama_suplier}}<br><small class="muted">{{.nama_bank}} {{.rekening}}</small></td><td>{{tgl .tgl_tempo}}<br><small class="{{if lt (toF .hari) 0.0}}danger{{else}}muted{{end}}">{{if lt (toF .hari) 0.0}}lewat {{.hari}} hari{{else}}{{.hari}} hari lagi{{end}}</small></td><td class="r">{{rp .tagihan}}</td><td class="r"><b>{{rp (sub .tagihan .dibayar)}}</b></td>
+<td>{{if $keu}}<form method="post" action="{{$.P}}/keuangan/bayar-hutang" class="payform">{{template "csrf" $}}<input type="hidden" name="tab" value="hutang"><input type="hidden" name="no_faktur" value="{{.no_faktur}}"><input name="besar" type="number" step="any" min="0" value="{{sub .tagihan .dibayar}}"><select name="via"><option>Bank</option><option>Kas</option></select><input name="no_bukti" placeholder="No. bukti/transfer"><button class="btn">Bayar</button></form>{{end}}</td></tr>
+{{else}}<tr><td colspan="6" class="muted">Tidak ada hutang</td></tr>{{end}}</table>
+<h2>Pembayaran {{tgl .Dari}} – {{tgl .Sampai}}</h2><table class="list"><tr><th>Tanggal</th><th>Faktur</th><th>Supplier</th><th>Via</th><th>No. bukti</th><th class="r">Besar</th></tr>{{range .Lunas}}<tr><td>{{tgl .tgl_bayar}}</td><td>{{.no_faktur}}</td><td>{{.nama_suplier}}</td><td>{{.nama_bayar}}</td><td>{{.no_bukti}}</td><td class="r">{{rp .besar_bayar}}</td></tr>{{end}}</table>
+{{end}}
+
+{{if eq .Tab "jurnal"}}
+{{if $keu}}<form method="post" action="{{.P}}/keuangan/jurnal" class="card form">{{template "csrf" .}}<input type="hidden" name="tab" value="jurnal"><h3>Jurnal umum (manual)</h3>
+<div class="g3"><label>No. bukti<input name="no_bukti"></label><label class="span2">Keterangan *<input name="keterangan" required></label></div>
+<table class="resep"><tr><th>Rekening</th><th>Debet</th><th>Kredit</th></tr>{{range .Rows}}<tr><td><input name="kd_rek" list="rek" autocomplete="off"></td><td><input name="debet" type="number" step="any" min="0"></td><td><input name="kredit" type="number" step="any" min="0"></td></tr>{{end}}</table>
+<div class="right"><button class="btn primary">Simpan jurnal</button></div></form>{{end}}
+<form class="bar"><input type="hidden" name="tab" value="jurnal"><input type="date" name="dari" value="{{.Dari}}"><input type="date" name="sampai" value="{{.Sampai}}"><button class="btn">Tampilkan</button></form>
+<table class="list jurnal"><tr><th>No. jurnal</th><th>Tanggal</th><th>Bukti</th><th>Rekening</th><th class="r">Debet</th><th class="r">Kredit</th></tr>
+{{range .Jurnal}}<tr class="jh"><td>{{.H.no_jurnal}}</td><td>{{tgl .H.tgl_jurnal}} {{.H.jam_jurnal}}</td><td>{{.H.no_bukti}}</td><td colspan="3"><i>{{.H.keterangan}}</i></td></tr>{{range .D}}<tr><td></td><td></td><td></td><td class="{{if eq2 .debet "0"}}indent{{end}}">{{.kd_rek}} {{.nm_rek}}</td><td class="r">{{if ne .debet "0"}}{{rp .debet}}{{end}}</td><td class="r">{{if ne .kredit "0"}}{{rp .kredit}}{{end}}</td></tr>{{end}}{{else}}<tr><td colspan="6" class="muted">Tidak ada jurnal</td></tr>{{end}}</table>
+{{end}}
+
+{{if eq .Tab "bukubesar"}}
+<form class="bar"><input type="hidden" name="tab" value="bukubesar"><select name="kd_rek">{{range .Rek}}<option value="{{.kd_rek}}" {{if eq2 $.KdSel .kd_rek}}selected{{end}}>{{.kd_rek}} {{.nm_rek}}</option>{{end}}</select><input type="date" name="dari" value="{{.Dari}}"><input type="date" name="sampai" value="{{.Sampai}}"><button class="btn">Tampilkan</button></form>
+{{with .RekSel}}<h2>{{.kd_rek}} {{.nm_rek}} <small>saldo normal {{.balance}}</small></h2>{{end}}
+<table class="list"><tr><th>Tanggal</th><th>No. jurnal</th><th>Bukti</th><th>Keterangan</th><th class="r">Debet</th><th class="r">Kredit</th><th class="r">Saldo</th></tr>
+<tr><td colspan="6"><i>Saldo awal</i></td><td class="r">{{rp .Awal}}</td></tr>
+{{range .BB}}<tr><td>{{tgl .tgl_jurnal}}</td><td>{{.no_jurnal}}</td><td>{{.no_bukti}}</td><td>{{.keterangan}}</td><td class="r">{{rp .debet}}</td><td class="r">{{rp .kredit}}</td><td class="r">{{rp .saldo}}</td></tr>{{end}}
+<tr class="total"><th colspan="6">Saldo akhir</th><th class="r">{{rp .Akhir}}</th></tr></table>
+{{end}}
+
+{{if eq .Tab "neracasaldo"}}{{template "periode" .}}
+<table class="list"><tr><th>Kode</th><th>Rekening</th><th>Tipe</th><th class="r">Debet</th><th class="r">Kredit</th><th class="r">Saldo</th></tr>
+{{range .NS}}{{if or .Debet .Kredit}}<tr><td>{{.KdRek}}</td><td><a href="?tab=bukubesar&kd_rek={{.KdRek}}&dari={{$.Dari}}&sampai={{$.Sampai}}">{{.NmRek}}</a></td><td>{{.Tipe}}/{{.Balance}}</td><td class="r">{{rp .Debet}}</td><td class="r">{{rp .Kredit}}</td><td class="r">{{rp .Saldo}}</td></tr>{{end}}{{end}}
+<tr class="total"><th colspan="3">TOTAL {{if eq (rp .TD) (rp .TK)}}<span class="tag big">seimbang</span>{{else}}<span class="danger">TIDAK SEIMBANG</span>{{end}}</th><th class="r">{{rp .TD}}</th><th class="r">{{rp .TK}}</th><th></th></tr></table>
+<p class="muted small">Akun neraca (N/M) dihitung kumulatif sampai akhir periode; akun laba-rugi (R) hanya mutasi periode ini.</p>
+{{end}}
+
+{{if eq .Tab "labarugi"}}{{template "periode" .}}
+<div class="card paper"><h3>LAPORAN LABA RUGI · {{tgl .Dari}} – {{tgl .Sampai}}</h3><table>
+<tr class="grp"><td colspan="2">Pendapatan</td></tr>{{range .PendL}}<tr><td class="indent">{{.KdRek}} {{.NmRek}}</td><td class="r">{{rp .Saldo}}</td></tr>{{end}}<tr><th>Total pendapatan</th><th class="r">{{rp .Pend}}</th></tr>
+<tr class="grp"><td colspan="2">Beban</td></tr>{{range .BebanL}}<tr><td class="indent">{{.KdRek}} {{.NmRek}}</td><td class="r">{{rp .Saldo}}</td></tr>{{end}}<tr><th>Total beban</th><th class="r">{{rp .Beban}}</th></tr>
+<tr class="total"><th>{{if lt .Laba 0.0}}RUGI{{else}}LABA{{end}} BERSIH</th><th class="r">{{rp .Laba}}</th></tr></table></div>
+{{end}}
+
+{{if eq .Tab "neraca"}}{{template "periode" .}}
+<div class="grid2"><div class="card"><h3>Aset per {{tgl .Sampai}}</h3><table>{{range .AsetL}}<tr><td>{{.KdRek}} {{.NmRek}}</td><td class="r">{{rp .Saldo}}</td></tr>{{end}}<tr class="total"><th>Total aset</th><th class="r">{{rp .Aset}}</th></tr></table></div>
+<div class="card"><h3>Kewajiban & ekuitas</h3><table>{{range .KewL}}<tr><td>{{.KdRek}} {{.NmRek}}</td><td class="r">{{rp .Saldo}}</td></tr>{{end}}{{range .ModalL}}<tr><td>{{.KdRek}} {{.NmRek}}</td><td class="r">{{rp .Saldo}}</td></tr>{{end}}
+<tr><td>Laba ditahan (periode sebelumnya)</td><td class="r">{{rp .LabaLalu}}</td></tr><tr><td>Laba periode berjalan</td><td class="r">{{rp .Laba}}</td></tr>
+<tr class="total"><th>Total kewajiban & ekuitas {{if eq (rp .Aset) (rp .Pasiva)}}<span class="tag big">seimbang</span>{{else}}<span class="danger">tidak seimbang</span>{{end}}</th><th class="r">{{rp .Pasiva}}</th></tr></table></div></div>
+{{end}}
+
+{{if eq .Tab "rekening"}}
+{{if $keu}}<form method="post" action="{{.P}}/keuangan/rekening" class="card form inlineform">{{template "csrf" .}}<input type="hidden" name="tab" value="rekening"><label>Kode<input name="kd_rek" required></label><label>Nama<input name="nm_rek" required></label><label>Tipe<select name="tipe"><option value="N">N — Neraca</option><option value="M">M — Modal</option><option value="R">R — Laba rugi</option></select></label><label>Saldo normal<select name="balance"><option>D</option><option>K</option></select></label><button class="btn primary">Simpan</button></form>{{end}}
+<table class="list"><tr><th>Kode</th><th>Nama</th><th>Tipe</th><th>Saldo normal</th></tr>{{range .Rek}}<tr><td>{{.kd_rek}}</td><td>{{.nm_rek}}</td><td>{{.tipe}}</td><td>{{.balance}}</td></tr>{{end}}</table>
+{{end}}
+
+{{if eq .Tab "setelan"}}
+<p class="muted">Akun yang dipakai jurnal otomatis (kasir, farmasi, pengadaan, piutang). Pendapatan dipetakan per kelompok billing.</p>
+<table class="list"><tr><th>Transaksi</th><th>Rekening</th><th>Keterangan</th></tr>{{range .Set}}<tr><td>{{.nama}}</td><td>{{if $keu}}<form method="post" action="{{$.P}}/keuangan/setelan" class="mapform">{{template "csrf" $}}<input type="hidden" name="tab" value="setelan"><input type="hidden" name="nama" value="{{.nama}}"><input name="kd_rek" list="rek" value="{{.kd_rek}} {{.nm_rek}}"><button class="btn">Simpan</button></form>{{else}}{{.kd_rek}} {{.nm_rek}}{{end}}</td><td>{{.keterangan}}</td></tr>{{end}}</table>
+{{end}}{{end}}
+{{define "periode"}}<form class="bar"><input type="hidden" name="tab" value="{{.Tab}}"><input type="date" name="dari" value="{{.Dari}}"><input type="date" name="sampai" value="{{.Sampai}}"><button class="btn">Tampilkan</button></form>{{end}}

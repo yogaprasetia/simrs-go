@@ -1,0 +1,5 @@
+{{define "content"}}{{$s := .S}}<div class="paper">{{template "kop" .}}<h3>SURAT PEMESANAN OBAT / BHP</h3>
+<table class="kv"><tr><td>Nomor</td><td>{{$s.no_pemesanan}}</td><td>Tanggal</td><td>{{tgl $s.tanggal}}</td></tr><tr><td>Kepada</td><td colspan="3">{{$s.nama_suplier}}, {{$s.alamat}} {{$s.kota}}</td></tr></table>
+<table class="list"><tr><th>No</th><th>Nama barang</th><th class="r">Jumlah</th><th>Satuan</th><th class="r">Perkiraan harga</th><th class="r">Total</th></tr>{{range $i, $x := .Items}}<tr><td>{{add $i 1}}</td><td>{{$x.nama_brng}}</td><td class="r">{{num $x.jumlah}}</td><td>{{$x.kode_sat}}</td><td class="r">{{rp $x.h_pesan}}</td><td class="r">{{rp $x.total}}</td></tr>{{end}}
+<tr class="total"><th colspan="5" class="r">Perkiraan total (termasuk PPN)</th><th class="r">{{rp $s.tagihan}}</th></tr></table>
+<div class="ttd">Apoteker penanggung jawab,<br><br><br>________________</div><button class="btn noprint" onclick="print()">Cetak</button></div>{{end}}

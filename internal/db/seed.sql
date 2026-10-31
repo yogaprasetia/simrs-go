@@ -187,3 +187,36 @@ INSERT IGNORE INTO pegawai (nik,nama,jk,jbtn,no_ktp) VALUES
 ('D0000006','dr. Hendra Gunawan, Sp.B','Pria','Dokter Spesialis','3372010606760006'),
 ('D0000007','dr. Fajar Nugroho, Sp.Rad','Pria','Dokter Spesialis','3372010707790007'),
 ('D0000008','dr. Wahyu Hidayat, Sp.An','Pria','Dokter Spesialis','3372010808810008');
+
+
+INSERT IGNORE INTO bangsal (kd_bangsal,nm_bangsal) VALUES ('GF','Gudang Farmasi');
+INSERT IGNORE INTO gudangbarang (kode_brng,kd_bangsal,stok) SELECT kode_brng,'GF',0 FROM databarang;
+
+INSERT IGNORE INTO datasuplier VALUES
+('S0001','PT Kimia Farma Trading & Distribution','Jl. Pemuda 12','Semarang','0248440011','BNI','0123456789'),
+('S0002','PT Anugrah Argon Medica','Jl. Kaligawe 5','Semarang','0246580022','Mandiri','1350001234567'),
+('S0003','PT Enseval Putera Megatrading','Jl. Majapahit 88','Semarang','0246710033','BCA','0091234567');
+
+INSERT IGNORE INTO rekening VALUES
+('111010','Kas Rumah Sakit','N','D','0'),('111020','Bank','N','D','0'),
+('113010','Piutang Pasien BPJS/Asuransi/Perusahaan','N','D','0'),
+('114010','Persediaan Obat & BHP','N','D','0'),('115010','PPN Masukan','N','D','0'),
+('211010','Hutang Usaha Obat','N','K','0'),
+('310100','Modal','M','K','0'),
+('410100','Pendapatan Registrasi','R','K','0'),('410200','Pendapatan Tindakan Rawat Jalan','R','K','0'),
+('410300','Pendapatan Tindakan Rawat Inap','R','K','0'),('410400','Pendapatan Laboratorium','R','K','0'),
+('410500','Pendapatan Radiologi','R','K','0'),('410600','Pendapatan Operasi/VK','R','K','0'),
+('410700','Pendapatan Obat','R','K','0'),('410800','Pendapatan Kamar','R','K','0'),('410900','Pendapatan Lain-lain','R','K','0'),
+('510100','HPP Obat','R','D','0'),('520100','Diskon Piutang','R','D','0'),('520200','Piutang Tidak Tertagih','R','D','0'),
+('520300','Selisih Stok Opname','R','D','0'),('530100','Beban Operasional Lain','R','D','0');
+
+INSERT IGNORE INTO app_set_akun VALUES
+('Kas','111010','Penerimaan tunai kasir & pembayaran'),('Bank','111020','Transfer bank'),
+('Piutang_Pasien','113010','Tagihan pasien non-umum (BPJS, asuransi, perusahaan)'),
+('Persediaan_Obat','114010','Persediaan obat gudang & depo'),('PPN_Masukan','115010','PPN pembelian obat'),
+('Hutang_Obat','211010','Hutang ke supplier obat'),
+('Pendapatan_Registrasi','410100',''),('Pendapatan_Ralan Dokter','410200',''),('Pendapatan_Ranap Dokter','410300',''),
+('Pendapatan_Laborat','410400',''),('Pendapatan_Radiologi','410500',''),('Pendapatan_Operasi','410600',''),
+('Pendapatan_Obat','410700',''),('Pendapatan_Kamar','410800',''),('Pendapatan_Tambahan','410900',''),
+('HPP_Obat','510100','Harga pokok obat yang diberikan ke pasien'),('Diskon_Piutang','520100',''),
+('Piutang_Tidak_Terbayar','520200',''),('Selisih_Opname','520300','');

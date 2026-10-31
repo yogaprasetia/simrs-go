@@ -74,7 +74,7 @@ func Migrate(ctx context.Context, d *sql.DB, seed bool) error {
 }
 
 // Role yang tersedia
-var Roles = []string{"admin", "pendaftaran", "dokter", "perawat", "farmasi", "lab", "kasir", "bpjs", "manajemen", "radiologi", "ok"}
+var Roles = []string{"admin", "pendaftaran", "dokter", "perawat", "farmasi", "lab", "kasir", "bpjs", "manajemen", "radiologi", "ok", "keuangan"}
 
 // EnsureAdmin membuat user admin bila belum ada user sama sekali.
 func EnsureAdmin(ctx context.Context, d *sql.DB, password string) (bool, error) {

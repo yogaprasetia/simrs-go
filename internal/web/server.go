@@ -103,6 +103,15 @@ func New(db *sql.DB, b *bpjs.Client, secret []byte) (*Server, error) {
 		"upper": strings.ToUpper,
 		"mul":   func(a, b any) float64 { return toF(a) * toF(b) },
 		"toF":   toF,
+		"sub":   func(a, b any) float64 { return toF(a) - toF(b) },
+		"dict": func(kv ...any) map[string]any {
+			m := map[string]any{}
+			for i := 0; i+1 < len(kv); i += 2 {
+				m[fmt.Sprint(kv[i])] = kv[i+1]
+			}
+			return m
+		},
+		"blank": func(n int) []Row { return make([]Row, n) },
 		"path":  func(p string) string { return s.Prefix + p },
 	}
 	layout, err := fs.ReadFile(tplFS, "templates/layout.html")
@@ -261,6 +270,8 @@ var menu = []MenuItem{
 	{"/radiologi", "Radiologi", "🩻", []string{"radiologi"}},
 	{"/operasi", "Kamar Operasi / VK", "⚕", []string{"ok", "dokter", "perawat", "kasir"}},
 	{"/kasir", "Kasir", "💰", []string{"kasir"}},
+	{"/logistik", "Logistik Farmasi", "📦", []string{"farmasi"}},
+	{"/keuangan", "Keuangan & Akuntansi", "📒", []string{"keuangan", "manajemen"}},
 	{"/bpjs", "Bridging BPJS", "🏥", []string{"bpjs", "pendaftaran"}},
 	{"/satusehat", "SATUSEHAT", "🇮🇩", []string{"bpjs", "manajemen"}},
 	{"/laporan", "Laporan", "📊", []string{"manajemen"}},

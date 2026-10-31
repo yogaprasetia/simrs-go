@@ -92,6 +92,7 @@ func (s *Server) routes() {
 	m.HandleFunc("GET "+p+"/laporan", s.guard(rLaporan, s.laporan))
 	s.routesPenunjang()
 	s.routesSatuSehat()
+	s.routesKeuangan()
 	m.HandleFunc("GET "+p+"/admin/users", s.guard(rAdmin, s.usersPage))
 	m.HandleFunc("POST "+p+"/admin/users", s.guard(rAdmin, s.usersSimpan))
 }
