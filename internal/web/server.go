@@ -25,6 +25,7 @@ import (
 
 	"github.com/yogaprasetia/simrs-go/internal/bpjs"
 	"github.com/yogaprasetia/simrs-go/internal/core"
+	"github.com/yogaprasetia/simrs-go/internal/satusehat"
 )
 
 //go:embed templates/*.html
@@ -42,6 +43,7 @@ type Server struct {
 	mux       *http.ServeMux
 	Instansi  string
 	UploadDir string
+	SS        *satusehat.Client
 }
 
 type User struct {
@@ -73,7 +75,7 @@ func userOf(r *http.Request) *User { u, _ := r.Context().Value(userKey).(*User);
 // ------------------------------------------------------------------ setup
 
 func New(db *sql.DB, b *bpjs.Client, secret []byte) (*Server, error) {
-	s := &Server{DB: db, BPJS: b, Secret: secret, UploadDir: "uploads", pages: map[string]*template.Template{}, mux: http.NewServeMux()}
+	s := &Server{DB: db, BPJS: b, Secret: secret, UploadDir: "uploads", SS: satusehat.New(satusehat.Config{Mode: "off"}, db), pages: map[string]*template.Template{}, mux: http.NewServeMux()}
 	_ = db.QueryRow("SELECT nama_instansi FROM setting LIMIT 1").Scan(&s.Instansi)
 	if s.Instansi == "" {
 		s.Instansi = "Rumah Sakit"
@@ -260,6 +262,7 @@ var menu = []MenuItem{
 	{"/operasi", "Kamar Operasi / VK", "⚕", []string{"ok", "dokter", "perawat", "kasir"}},
 	{"/kasir", "Kasir", "💰", []string{"kasir"}},
 	{"/bpjs", "Bridging BPJS", "🏥", []string{"bpjs", "pendaftaran"}},
+	{"/satusehat", "SATUSEHAT", "🇮🇩", []string{"bpjs", "manajemen"}},
 	{"/laporan", "Laporan", "📊", []string{"manajemen"}},
 	{"/admin/users", "Pengguna", "⚙", nil},
 }
@@ -284,6 +287,7 @@ func (s *Server) render(w http.ResponseWriter, r *http.Request, page string, dat
 		data["Err"] = r.URL.Query().Get("err")
 	}
 	data["BPJSMode"] = s.BPJS.Cfg.Mode
+	data["SSMode"] = s.SS.Cfg.Mode
 	if u != nil {
 		tok, _ := r.Context().Value(ctxKey(2)).(string)
 		data["CSRF"] = s.csrf(u, tok)

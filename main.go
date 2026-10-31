@@ -13,12 +13,14 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
 
 	"github.com/yogaprasetia/simrs-go/internal/bpjs"
 	"github.com/yogaprasetia/simrs-go/internal/db"
+	"github.com/yogaprasetia/simrs-go/internal/satusehat"
 	"github.com/yogaprasetia/simrs-go/internal/web"
 )
 
@@ -139,6 +141,36 @@ func main() {
 	}
 	srv.Prefix = strings.TrimRight(env("BASE_PATH", ""), "/")
 	srv.UploadDir = env("UPLOAD_DIR", "uploads")
+
+	ss := satusehat.Config{Mode: env("SATUSEHAT_MODE", "off"), ClientID: env("SATUSEHAT_CLIENT_ID", ""), ClientSecret: env("SATUSEHAT_CLIENT_SECRET", ""), OrgID: env("SATUSEHAT_ORG_ID", "")}
+	switch ss.Mode {
+	case "dev", "stg", "prod":
+		ep := satusehat.Endpoints[ss.Mode]
+		ss.AuthURL, ss.BaseURL = env("SATUSEHAT_AUTH_URL", ep[0]), env("SATUSEHAT_FHIR_URL", ep[1])
+		if ss.ClientID == "" || ss.ClientSecret == "" || ss.OrgID == "" {
+			log.Fatal("SATUSEHAT_MODE " + ss.Mode + " membutuhkan SATUSEHAT_CLIENT_ID, SATUSEHAT_CLIENT_SECRET, dan SATUSEHAT_ORG_ID")
+		}
+	case "mock":
+		ss.ClientID, ss.ClientSecret = "mock", "mock-secret"
+		if ss.OrgID == "" {
+			ss.OrgID = "10000004"
+		}
+		m := satusehat.NewMock(ss.ClientID, ss.ClientSecret, ss.OrgID)
+		a, f, err := m.Start()
+		if err != nil {
+			log.Fatal(err)
+		}
+		ss.AuthURL, ss.BaseURL = a, f
+		log.Printf("SATUSEHAT mode mock: server tiruan di %s", f)
+	case "off", "":
+	default:
+		log.Fatal("SATUSEHAT_MODE harus off, mock, dev, stg, atau prod")
+	}
+	srv.SS = satusehat.New(ss, d)
+	if menit, _ := strconv.Atoi(env("SATUSEHAT_AUTO_MENIT", "0")); menit > 0 && ss.Mode != "off" {
+		go srv.SS.AutoSync(context.Background(), d, time.Duration(menit)*time.Minute, log.Printf)
+		log.Printf("SATUSEHAT: kirim otomatis tiap %d menit", menit)
+	}
 	addr := env("LISTEN", "127.0.0.1:8090")
 	hs := &http.Server{Addr: addr, Handler: srv, ReadHeaderTimeout: 10 * time.Second, ReadTimeout: 60 * time.Second, WriteTimeout: 90 * time.Second}
 	go func() {

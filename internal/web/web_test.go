@@ -21,6 +21,7 @@ import (
 	"github.com/yogaprasetia/simrs-go/internal/bpjs"
 	"github.com/yogaprasetia/simrs-go/internal/core"
 	"github.com/yogaprasetia/simrs-go/internal/db"
+	"github.com/yogaprasetia/simrs-go/internal/satusehat"
 	"github.com/yogaprasetia/simrs-go/internal/web"
 )
 
@@ -79,6 +80,9 @@ func setup(t *testing.T) (*sql.DB, *httptest.Server, *bpjs.Mock, *logBuf) {
 		t.Fatal(err)
 	}
 	srv.UploadDir = t.TempDir()
+	ssm := satusehat.NewMock("sc", "ss", "100000001")
+	sa, sf, _ := ssm.Start()
+	srv.SS = satusehat.New(satusehat.Config{Mode: "mock", ClientID: "sc", ClientSecret: "ss", OrgID: "100000001", AuthURL: sa, BaseURL: sf}, d)
 	lb := &logBuf{}
 	log.SetOutput(lb)
 	return d, httptest.NewServer(srv), m, lb
@@ -575,4 +579,66 @@ func (c *client) crawl(page string) int {
 		n++
 	}
 	return n
+}
+
+func TestWebSatuSehat(t *testing.T) {
+	d, ts, _, lb := setup(t)
+	defer ts.Close()
+	B := ts.URL
+	daf := login(t, B, "daftar") // pendaftaran,bpjs
+	dr := login(t, B, "dr")
+	ksr := login(t, B, "kasir")
+	mgr := login(t, B, "mgr")
+	dr.get("/satusehat", 403)
+	ksr.get("/satusehat", 403)
+
+	daf.postOK("/pasien/simpan", url.Values{"nm_pasien": {"Budi"}, "jk": {"L"}, "tgl_lahir": {"1980-01-01"}, "no_ktp": {"3372010101800001"}, "kd_pj": {"A09"}})
+	daf.postOK("/registrasi", url.Values{"no_rkm_medis": {"000001"}, "kd_poli": {"INT"}, "kd_dokter": {"D0000002"}, "kd_pj": {"A09"}})
+	no := strings.ReplaceAll(core.Today(), "-", "/") + "/000001"
+	dr.postOK("/rawat/soap", url.Values{"no_rawat": {no}, "tensi": {"140/90"}, "nadi": {"80"}, "suhu_tubuh": {"36.5"}, "keluhan": {"kontrol"}})
+	dr.postOK("/rawat/diagnosa", url.Values{"no_rawat": {no}, "kd_penyakit": {"I10"}})
+
+	daf.postOK("/satusehat/token", url.Values{"tab": {"kirim"}})
+	body := daf.get("/satusehat", 200)
+	if !strings.Contains(body, "lokasi belum mapping") {
+		t.Fatal("peringatan mapping tidak tampil")
+	}
+	daf.postErr("/satusehat/kirim", url.Values{"no_rawat": {no}, "tab": {"kirim"}}, "belum di-mapping")
+	daf.get("/satusehat?tab=mapping", 200)
+	daf.postOK("/satusehat/lokasi", url.Values{"tab": {"mapping"}, "jenis": {"ralan"}, "kode": {"INT"}, "auto": {"1"}})
+	id := q1(t, d, "SELECT id_lokasi_satusehat FROM satu_sehat_mapping_lokasi_ralan WHERE kd_poli='INT'")
+	if len(id) != 36 {
+		t.Fatalf("id lokasi %q", id)
+	}
+	daf.postErr("/satusehat/lokasi", url.Values{"tab": {"mapping"}, "jenis": {"ralan"}, "kode": {"U0001"}, "id_lokasi": {id}}, "sudah dipakai")
+	daf.postErr("/satusehat/nik-dokter", url.Values{"tab": {"mapping"}, "kd_dokter": {"D0000002"}, "no_ktp": {"123"}}, "16 digit")
+	body = daf.postOK("/satusehat/nik-dokter", url.Values{"tab": {"mapping"}, "kd_dokter": {"D0000002"}, "no_ktp": {"3372014202800002"}})
+	if !strings.Contains(body, "IHS N") {
+		t.Fatal("IHS dokter tidak tampil")
+	}
+	daf.postOK("/satusehat/kirim", url.Values{"no_rawat": {no}, "tab": {"kirim"}})
+	if q1(t, d, "SELECT COUNT(*) FROM satu_sehat_observationttvtensi") != "1" || q1(t, d, "SELECT COUNT(*) FROM satu_sehat_condition") != "1" {
+		t.Fatal("tidak terkirim")
+	}
+	ksr.postOK("/kasir/bayar", url.Values{"no_rawat": {no}})
+	dari := core.Now().AddDate(0, 0, -1).Format("2006-01-02")
+	daf.postOK("/satusehat/kirim-semua", url.Values{"tab": {"kirim"}, "dari": {dari}, "sampai": {core.Today()}})
+	if q1(t, d, "SELECT status FROM app_satusehat_encounter_status WHERE no_rawat=?", no) != "finished" {
+		t.Fatal("encounter belum finished")
+	}
+	body = mgr.get("/satusehat?st=selesai", 200)
+	if !strings.Contains(body, "1 dari 1") {
+		t.Fatal("ringkasan finished")
+	}
+	if resp, _ := mgr.c.PostForm(B+"/satusehat/kirim", url.Values{"no_rawat": {no}, "_csrf": {mgr.csrf}}); resp.StatusCode != 403 {
+		t.Fatalf("manajemen hanya boleh melihat, dapat %d", resp.StatusCode)
+	}
+	if !strings.Contains(mgr.get("/satusehat?tab=log", 200), "Encounter") {
+		t.Fatal("log")
+	}
+	daf.crawl("/satusehat")
+	daf.crawl("/satusehat?tab=mapping")
+	if l := lb.Take(); strings.Contains(l, "render") || strings.Contains(l, "query:") || strings.Contains(l, "scan:") || strings.Contains(l, "error GET") {
+		t.Fatalf("log error:\n%s", l)
+	}
 }

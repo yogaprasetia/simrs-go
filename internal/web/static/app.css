@@ -56,3 +56,5 @@ body.print{background:#fff}.paper,.slip{max-width:800px;margin:auto}.slip{max-wi
 .slot{position:absolute;top:3px;bottom:3px;border-radius:5px;padding:4px 6px;font-size:11px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-decoration:none;background:#b54708}
 .slot.s-Proses{background:#b42318}.s-Proses.Operasi{background:#b42318}.slot.s-Selesai{background:#067647}
 .phead>.r{white-space:nowrap;min-width:120px}
+.mono{font-family:ui-monospace,monospace;font-size:11px}tr.warnrow td{background:#fff6ed}.mapform{display:flex;gap:6px}.mapform input{margin:0;min-width:120px}
+h1 .btn{font-size:14px;font-weight:500}

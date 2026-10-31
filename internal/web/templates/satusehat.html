@@ -1,0 +1,37 @@
+{{define "content"}}<h1>SATUSEHAT <span class="tag">{{.Cfg.Mode}}</span>{{if .Cfg.OrgID}} <small>Org {{.Cfg.OrgID}}</small>{{end}}
+{{if has .User "bpjs"}}<form method="post" action="{{.P}}/satusehat/token" class="inline">{{template "csrf" .}}<input type="hidden" name="tab" value="{{.Tab}}"><button class="btn">Tes koneksi</button></form>{{end}}</h1>
+{{if eq .Cfg.Mode "off"}}<div class="alert">Bridging nonaktif. Isi SATUSEHAT_MODE, SATUSEHAT_CLIENT_ID, SATUSEHAT_CLIENT_SECRET dan SATUSEHAT_ORG_ID di file konfigurasi server (tidak lewat halaman ini).</div>{{end}}
+{{if eq .Cfg.Mode "mock"}}<div class="alert">Mode <b>mock</b>: server tiruan lokal. NIK 16 digit apa pun dianggap terdaftar, kecuali yang diawali 9999. Tidak terhubung ke Kemenkes.</div>{{end}}
+<div class="tabs">{{range split "kirim:Kirim data,mapping:Mapping lokasi & dokter,log:Log" ","}}{{$kv := split . ":"}}<a href="?tab={{index $kv 0}}&dari={{$.Dari}}&sampai={{$.Sampai}}" class="{{if eq2 $.Tab (index $kv 0)}}on{{end}}">{{index $kv 1}}</a>{{end}}</div>
+
+{{if eq .Tab "kirim"}}
+<form class="bar"><input type="hidden" name="tab" value="kirim"><input type="date" name="dari" value="{{.Dari}}"><input type="date" name="sampai" value="{{.Sampai}}">
+<select name="st"><option value="">Semua</option><option value="belum" {{if eq .St "belum"}}selected{{end}}>Belum tuntas</option><option value="selesai" {{if eq .St "selesai"}}selected{{end}}>Finished</option></select><button class="btn">Tampilkan</button></form>
+<div class="card info">{{.Selesai}} dari {{.Total}} kunjungan sudah <b>finished</b> di SATUSEHAT.
+{{if has .User "bpjs"}}<form method="post" action="{{.P}}/satusehat/kirim-semua" class="inline">{{template "csrf" .}}<input type="hidden" name="tab" value="kirim"><input type="hidden" name="dari" value="{{.Dari}}"><input type="hidden" name="sampai" value="{{.Sampai}}"><input type="hidden" name="st" value="{{.St}}"><button class="btn primary">Kirim semua yang belum (maks. 100)</button></form>{{end}}
+<br><small class="muted">Urutan kirim: Encounter (arrived) → Condition ICD-10 → Procedure ICD-9-CM → Observation tanda vital → Encounter finished (setelah kasir lunas untuk rawat jalan / pasien pulang untuk rawat inap, wajib ada diagnosa).</small></div>
+<table class="list"><tr><th>No. rawat</th><th>Pasien</th><th>Unit / dokter</th><th>Encounter</th><th>Diagnosa</th><th>Prosedur</th><th>TTV</th><th>Keterangan</th><th></th></tr>
+{{range .List}}{{$siap := and (eq (len .no_ktp) 16) (eq (len .ktp_dokter) 16) .lokasi}}<tr class="{{if or .galat (and (not .id_encounter) (not $siap))}}warnrow{{end}}"><td><a href="{{$.P}}/rawat?no={{.no_rawat}}">{{.no_rawat}}</a><br><small>{{tgl .tgl_registrasi}} {{.jam_reg}} · {{.status_lanjut}}</small></td>
+<td>{{.nm_pasien}}<br><small class="{{if ne (len .no_ktp) 16}}danger{{else}}muted{{end}}">NIK {{if .no_ktp}}{{.no_ktp}}{{else}}kosong{{end}}</small></td>
+<td>{{.nm_poli}}{{if not .lokasi}} <small class="danger">(lokasi belum mapping)</small>{{end}}<br><small class="{{if ne (len .ktp_dokter) 16}}danger{{else}}muted{{end}}">{{.nm_dokter}}{{if ne (len .ktp_dokter) 16}} — NIK kosong{{end}}</small></td>
+<td>{{if .id_encounter}}<span class="st {{if eq2 .enc_status "finished"}}st-Sudah{{end}}">{{.enc_status}}</span><br><small class="muted mono">{{.id_encounter}}</small>{{else}}<span class="st st-Belum">belum</span>{{end}}</td>
+<td>{{.dx_kirim}}/{{.dx_total}}</td><td>{{.pr_kirim}}/{{.pr_total}}</td><td>{{.obs_kirim}}</td>
+<td class="small">{{if .galat}}<span class="danger">{{.galat}}</span>{{else if eq2 .enc_status "finished"}}<span class="muted">tuntas</span>{{else if .id_encounter}}<span class="muted">{{if eq2 .status_lanjut "Ranap"}}menunggu pasien pulang{{else if ne .status_bayar "Sudah Bayar"}}menunggu kasir lunas{{else}}siap diselesaikan{{end}}</span>{{end}}</td>
+<td>{{if and (has $.User "bpjs") (ne .enc_status "finished")}}<form method="post" action="{{$.P}}/satusehat/kirim" class="inline">{{template "csrf" $}}<input type="hidden" name="tab" value="kirim"><input type="hidden" name="dari" value="{{$.Dari}}"><input type="hidden" name="sampai" value="{{$.Sampai}}"><input type="hidden" name="st" value="{{$.St}}"><input type="hidden" name="no_rawat" value="{{.no_rawat}}"><button class="btn">Kirim</button></form>{{end}}</td></tr>
+{{else}}<tr><td colspan="9" class="muted">Tidak ada kunjungan</td></tr>{{end}}</table>
+{{end}}
+
+{{if eq .Tab "mapping"}}
+<p class="muted">Setiap poli/unit dan kamar rawat inap harus punya Location di SATUSEHAT. Isi ID yang sudah ada, atau klik <b>Buat</b> untuk mendaftarkan Location baru atas nama Organization RS.</p>
+<div class="grid2">
+<div class="card"><h3>Lokasi rawat jalan (poli)</h3><table>{{range .Poli}}<tr><td>{{.kd_poli}}<br><small>{{.nm_poli}}</small></td><td>
+{{if has $.User "bpjs"}}<form method="post" action="{{$.P}}/satusehat/lokasi" class="mapform">{{template "csrf" $}}<input type="hidden" name="tab" value="mapping"><input type="hidden" name="jenis" value="ralan"><input type="hidden" name="kode" value="{{.kd_poli}}"><input name="id_lokasi" value="{{.id_lokasi}}" placeholder="ID Location"><button class="btn">Simpan</button>{{if not .id_lokasi}}<button class="btn" name="auto" value="1">Buat</button>{{end}}</form>{{else}}<span class="mono">{{.id_lokasi}}</span>{{end}}</td></tr>{{end}}</table></div>
+<div class="card"><h3>Lokasi rawat inap (kamar)</h3><table>{{range .Kamar}}<tr><td>{{.kd_kamar}}<br><small>{{.nm_bangsal}} · {{.kelas}}</small></td><td>
+{{if has $.User "bpjs"}}<form method="post" action="{{$.P}}/satusehat/lokasi" class="mapform">{{template "csrf" $}}<input type="hidden" name="tab" value="mapping"><input type="hidden" name="jenis" value="ranap"><input type="hidden" name="kode" value="{{.kd_kamar}}"><input name="id_lokasi" value="{{.id_lokasi}}" placeholder="ID Location"><button class="btn">Simpan</button>{{if not .id_lokasi}}<button class="btn" name="auto" value="1">Buat</button>{{end}}</form>{{else}}<span class="mono">{{.id_lokasi}}</span>{{end}}</td></tr>{{end}}</table></div>
+<div class="card"><h3>NIK dokter (Practitioner)</h3><table>{{range .Dokter}}<tr><td>{{.nm_dokter}}<br><small class="muted">{{.kd_dokter}}{{if .ihs}} · IHS {{.ihs}}{{end}}</small></td><td>
+{{if has $.User "bpjs"}}<form method="post" action="{{$.P}}/satusehat/nik-dokter" class="mapform">{{template "csrf" $}}<input type="hidden" name="tab" value="mapping"><input type="hidden" name="kd_dokter" value="{{.kd_dokter}}"><input name="no_ktp" value="{{.no_ktp}}" maxlength="16" placeholder="NIK 16 digit"><button class="btn">Simpan</button></form>{{else}}{{.no_ktp}}{{end}}</td></tr>{{end}}</table></div>
+</div>{{end}}
+
+{{if eq .Tab "log"}}
+<table class="list small"><tr><th>Waktu</th><th>Request</th><th>Kode</th><th>Pesan</th><th>ms</th></tr>{{range .Log}}<tr class="{{if ge (toF .code) 400.0}}warnrow{{end}}"><td>{{.waktu}}</td><td>{{.method}} {{.url}}</td><td>{{.code}}</td><td>{{.message}}</td><td>{{.durasi_ms}}</td></tr>{{else}}<tr><td colspan="5" class="muted">Belum ada log</td></tr>{{end}}</table>
+{{end}}{{end}}

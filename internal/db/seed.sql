@@ -175,3 +175,15 @@ INSERT IGNORE INTO paket_operasi (kode_paket,nm_perawatan,kategori,operator1,asi
 INSERT IGNORE INTO obatbhp_ok VALUES
 ('OK001','Benang Vicryl 2/0','BTL',95000),('OK002','Benang Silk 3/0','BTL',45000),('OK003','Propofol 200 mg','AMP',85000),
 ('OK004','Bupivacaine Spinal 0,5%','AMP',75000),('OK005','Kasa Steril','SAC',8000),('OK006','Handscoon Steril','SAC',12000),('OK007','Mesh Hernia','SAC',850000);
+
+
+-- NIK tenaga kesehatan (pegawai.nik = kd_dokter seperti Khanza). NIK contoh, ganti dengan NIK asli.
+INSERT IGNORE INTO pegawai (nik,nama,jk,jbtn,no_ktp) VALUES
+('D0000001','dr. Andi Pratama','Pria','Dokter Umum','3372010101850001'),
+('D0000002','dr. Sari Wulandari, Sp.PD','Wanita','Dokter Spesialis','3372014202800002'),
+('D0000003','dr. Budi Santoso, Sp.A','Pria','Dokter Spesialis','3372010303780003'),
+('D0000004','dr. Rina Kartika, Sp.OG','Wanita','Dokter Spesialis','3372014404820004'),
+('D0000005','drg. Dewi Lestari','Wanita','Dokter Gigi','3372014505880005'),
+('D0000006','dr. Hendra Gunawan, Sp.B','Pria','Dokter Spesialis','3372010606760006'),
+('D0000007','dr. Fajar Nugroho, Sp.Rad','Pria','Dokter Spesialis','3372010707790007'),
+('D0000008','dr. Wahyu Hidayat, Sp.An','Pria','Dokter Spesialis','3372010808810008');

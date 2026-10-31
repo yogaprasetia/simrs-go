@@ -764,3 +764,152 @@ CREATE TABLE IF NOT EXISTS beri_obat_operasi (
   jumlah double NOT NULL,
   KEY idx_rawat (no_rawat)
 );
+
+
+-- ===================================================== SATUSEHAT (nama tabel mengikuti Khanza)
+CREATE TABLE IF NOT EXISTS pegawai (
+  id int NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  nik varchar(20) NOT NULL,
+  nama varchar(50) NOT NULL,
+  jk enum('Pria','Wanita') NOT NULL DEFAULT 'Pria',
+  jbtn varchar(25) NOT NULL DEFAULT '',
+  no_ktp varchar(20) NOT NULL DEFAULT '',
+  UNIQUE KEY uk_nik (nik)
+);
+
+CREATE TABLE IF NOT EXISTS satu_sehat_mapping_lokasi_ralan (
+  kd_poli char(5) NOT NULL PRIMARY KEY,
+  id_organisasi_satusehat varchar(40) DEFAULT NULL,
+  id_lokasi_satusehat varchar(40) DEFAULT NULL,
+  longitude varchar(30) NOT NULL DEFAULT '',
+  latitude varchar(30) NOT NULL DEFAULT '',
+  altittude varchar(30) NOT NULL DEFAULT '',
+  UNIQUE KEY uk_lokasi (id_lokasi_satusehat)
+);
+
+CREATE TABLE IF NOT EXISTS satu_sehat_mapping_lokasi_ranap (
+  kd_kamar varchar(15) NOT NULL PRIMARY KEY,
+  id_organisasi_satusehat varchar(40) DEFAULT NULL,
+  id_lokasi_satusehat varchar(40) DEFAULT NULL,
+  longitude varchar(30) NOT NULL DEFAULT '',
+  latitude varchar(30) NOT NULL DEFAULT '',
+  altittude varchar(30) NOT NULL DEFAULT '',
+  UNIQUE KEY uk_lokasi (id_lokasi_satusehat)
+);
+
+CREATE TABLE IF NOT EXISTS satu_sehat_encounter (
+  no_rawat varchar(17) NOT NULL PRIMARY KEY,
+  id_encounter varchar(40) DEFAULT NULL
+);
+
+CREATE TABLE IF NOT EXISTS satu_sehat_condition (
+  no_rawat varchar(17) NOT NULL,
+  kd_penyakit varchar(15) NOT NULL,
+  status enum('Ralan','Ranap') NOT NULL,
+  id_condition varchar(40) DEFAULT NULL,
+  PRIMARY KEY (no_rawat, kd_penyakit, status)
+);
+
+CREATE TABLE IF NOT EXISTS satu_sehat_procedure (
+  no_rawat varchar(17) NOT NULL,
+  kode varchar(10) NOT NULL,
+  status enum('Ralan','Ranap') NOT NULL,
+  id_procedure varchar(40) DEFAULT NULL,
+  PRIMARY KEY (no_rawat, kode, status)
+);
+
+CREATE TABLE IF NOT EXISTS satu_sehat_observationttvnadi (
+  no_rawat varchar(17) NOT NULL,
+  tgl_perawatan date NOT NULL,
+  jam_rawat time NOT NULL,
+  status enum('Ralan','Ranap') NOT NULL,
+  id_observation varchar(40) DEFAULT NULL,
+  PRIMARY KEY (no_rawat, tgl_perawatan, jam_rawat, status)
+);
+
+CREATE TABLE IF NOT EXISTS satu_sehat_observationttvrespirasi (
+  no_rawat varchar(17) NOT NULL,
+  tgl_perawatan date NOT NULL,
+  jam_rawat time NOT NULL,
+  status enum('Ralan','Ranap') NOT NULL,
+  id_observation varchar(40) DEFAULT NULL,
+  PRIMARY KEY (no_rawat, tgl_perawatan, jam_rawat, status)
+);
+
+CREATE TABLE IF NOT EXISTS satu_sehat_observationttvsuhu (
+  no_rawat varchar(17) NOT NULL,
+  tgl_perawatan date NOT NULL,
+  jam_rawat time NOT NULL,
+  status enum('Ralan','Ranap') NOT NULL,
+  id_observation varchar(40) DEFAULT NULL,
+  PRIMARY KEY (no_rawat, tgl_perawatan, jam_rawat, status)
+);
+
+CREATE TABLE IF NOT EXISTS satu_sehat_observationttvtensi (
+  no_rawat varchar(17) NOT NULL,
+  tgl_perawatan date NOT NULL,
+  jam_rawat time NOT NULL,
+  status enum('Ralan','Ranap') NOT NULL,
+  id_observation varchar(40) DEFAULT NULL,
+  PRIMARY KEY (no_rawat, tgl_perawatan, jam_rawat, status)
+);
+
+CREATE TABLE IF NOT EXISTS satu_sehat_observationttvtb (
+  no_rawat varchar(17) NOT NULL,
+  tgl_perawatan date NOT NULL,
+  jam_rawat time NOT NULL,
+  status enum('Ralan','Ranap') NOT NULL,
+  id_observation varchar(40) DEFAULT NULL,
+  PRIMARY KEY (no_rawat, tgl_perawatan, jam_rawat, status)
+);
+
+CREATE TABLE IF NOT EXISTS satu_sehat_observationttvbb (
+  no_rawat varchar(17) NOT NULL,
+  tgl_perawatan date NOT NULL,
+  jam_rawat time NOT NULL,
+  status enum('Ralan','Ranap') NOT NULL,
+  id_observation varchar(40) DEFAULT NULL,
+  PRIMARY KEY (no_rawat, tgl_perawatan, jam_rawat, status)
+);
+
+CREATE TABLE IF NOT EXISTS satu_sehat_observationttvlp (
+  no_rawat varchar(17) NOT NULL,
+  tgl_perawatan date NOT NULL,
+  jam_rawat time NOT NULL,
+  status enum('Ralan','Ranap') NOT NULL,
+  id_observation varchar(40) DEFAULT NULL,
+  PRIMARY KEY (no_rawat, tgl_perawatan, jam_rawat, status)
+);
+
+CREATE TABLE IF NOT EXISTS app_satusehat_ihs (
+  jenis enum('Patient','Practitioner') NOT NULL,
+  nik varchar(20) NOT NULL,
+  ihs varchar(40) NOT NULL,
+  nama varchar(100) DEFAULT '',
+  waktu datetime NOT NULL,
+  PRIMARY KEY (jenis, nik)
+);
+
+CREATE TABLE IF NOT EXISTS app_satusehat_encounter_status (
+  no_rawat varchar(17) NOT NULL PRIMARY KEY,
+  status varchar(15) NOT NULL,
+  waktu datetime NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS app_satusehat_log (
+  id bigint NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  waktu datetime NOT NULL,
+  method varchar(6) NOT NULL,
+  url varchar(255) NOT NULL,
+  request text,
+  code int NOT NULL DEFAULT 0,
+  message varchar(500) DEFAULT '',
+  durasi_ms int DEFAULT 0,
+  KEY idx_waktu (waktu)
+);
+
+CREATE TABLE IF NOT EXISTS app_satusehat_error (
+  no_rawat varchar(17) NOT NULL PRIMARY KEY,
+  pesan varchar(1000) NOT NULL,
+  waktu datetime NOT NULL
+);
