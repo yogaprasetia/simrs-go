@@ -6,4 +6,6 @@
 <div class="card"><h3>10 besar penyakit (diagnosa utama)</h3><table>{{range .Penyakit}}<tr><td>{{.kd_penyakit}}</td><td>{{.nm_penyakit}}</td><td class="r">{{.jml}}</td></tr>{{end}}</table></div>
 <div class="card"><h3>Pendapatan per kelompok</h3><table>{{range .Pendapatan}}<tr><td>{{.status}}</td><td class="r">{{rp .total}}</td></tr>{{end}}</table></div>
 <div class="card"><h3>Pendapatan per cara bayar</h3><table>{{range .PendapatanBayar}}<tr><td>{{.png_jawab}}</td><td class="r">{{.jml}} nota</td><td class="r">{{rp .total}}</td></tr>{{end}}</table></div>
+<div class="card"><h3>Pemeriksaan radiologi</h3><table>{{range .Rad}}<tr><td>{{.nm_perawatan}}</td><td class="r">{{.jml}}</td><td class="r">{{rp .total}}</td></tr>{{else}}<tr><td class="muted">-</td></tr>{{end}}</table></div>
+<div class="card"><h3>Tindakan operasi / VK</h3><table>{{range .Ops}}<tr><td>{{.kategori}}</td><td>{{.nm_perawatan}}</td><td class="r">{{.jml}}</td><td class="r">{{rp .total}}</td></tr>{{else}}<tr><td class="muted">-</td></tr>{{end}}</table></div>
 <div class="card"><h3>10 obat terbanyak</h3><table>{{range .Obat}}<tr><td>{{.nama_brng}}</td><td class="r">{{num .jml}} {{.kode_sat}}</td><td class="r">{{rp .total}}</td></tr>{{end}}</table></div></div>{{end}}

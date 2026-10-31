@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"io"
 	"log"
+	"mime/multipart"
 	"net/http"
 	"net/http/cookiejar"
 	"net/http/httptest"
@@ -15,6 +16,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/yogaprasetia/simrs-go/internal/bpjs"
 	"github.com/yogaprasetia/simrs-go/internal/core"
@@ -64,7 +66,7 @@ func setup(t *testing.T) (*sql.DB, *httptest.Server, *bpjs.Mock, *logBuf) {
 	if err := db.Migrate(ctx, d, true); err != nil {
 		t.Fatal(err)
 	}
-	for _, u := range [][3]string{{"admin", "admin", ""}, {"daftar", "pendaftaran,bpjs", ""}, {"dr", "dokter", "D0000002"}, {"apt", "farmasi", ""}, {"lab", "lab", ""}, {"kasir", "kasir", ""}, {"mgr", "manajemen", ""}, {"prw", "perawat", ""}} {
+	for _, u := range [][3]string{{"admin", "admin", ""}, {"daftar", "pendaftaran,bpjs", ""}, {"dr", "dokter", "D0000002"}, {"apt", "farmasi", ""}, {"lab", "lab", ""}, {"kasir", "kasir", ""}, {"mgr", "manajemen", ""}, {"prw", "perawat", ""}, {"rad", "radiologi", ""}, {"okp", "ok", ""}, {"drb", "dokter", "D0000006"}} {
 		if err := db.UpsertUser(ctx, d, u[0], strings.ToUpper(u[0]), "rahasia123", u[1], u[2]); err != nil {
 			t.Fatal(err)
 		}
@@ -76,6 +78,7 @@ func setup(t *testing.T) (*sql.DB, *httptest.Server, *bpjs.Mock, *logBuf) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	srv.UploadDir = t.TempDir()
 	lb := &logBuf{}
 	log.SetOutput(lb)
 	return d, httptest.NewServer(srv), m, lb
@@ -386,13 +389,190 @@ func TestWebAlurLengkap(t *testing.T) {
 		t.Fatal("batal")
 	}
 
+	daf.crawl("/pasien/riwayat?rm=000001")
+	apt.crawl("/farmasi?st=selesai")
+	lab.crawl("/lab?st=selesai")
+	prw.crawl("/ranap")
+	ksr.crawl("/kasir?st=Sudah+Bayar")
+	daf.crawl("/bpjs")
 	// logout
 	adm.post("/logout", nil)
 	r, _ = adm.c.Get(B + "/")
 	if !strings.Contains(r.Request.URL.Path, "/login") {
 		t.Fatal("logout tidak menghapus sesi")
 	}
-	if l := lb.Take(); strings.Contains(l, "render") || strings.Contains(l, "query:") || strings.Contains(l, "scan:") {
+	if l := lb.Take(); strings.Contains(l, "render") || strings.Contains(l, "query:") || strings.Contains(l, "scan:") || strings.Contains(l, "error GET") {
 		t.Fatalf("ada error template/query di log:\n%s", l)
 	}
+}
+
+// png 1x1
+var tinyPNG = []byte{0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x06, 0x00, 0x00, 0x00, 0x1f, 0x15, 0xc4, 0x89, 0x00, 0x00, 0x00, 0x0d, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9c, 0x63, 0xf8, 0xcf, 0xc0, 0xf0, 0x1f, 0x00, 0x05, 0x00, 0x01, 0xff, 0x89, 0x99, 0x3d, 0x1d, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82}
+
+func (c *client) upload(path string, fields map[string]string, fname string, data []byte) (string, string) {
+	c.t.Helper()
+	var buf bytes.Buffer
+	mw := multipart.NewWriter(&buf)
+	mw.WriteField("_csrf", c.csrf)
+	for k, v := range fields {
+		mw.WriteField(k, v)
+	}
+	fw, _ := mw.CreateFormFile("gambar", fname)
+	fw.Write(data)
+	mw.Close()
+	resp, err := c.c.Post(c.base+path, mw.FormDataContentType(), &buf)
+	if err != nil {
+		c.t.Fatal(err)
+	}
+	b, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+	return resp.Request.URL.String(), string(b)
+}
+
+func TestWebRadiologiOperasi(t *testing.T) {
+	d, ts, _, lb := setup(t)
+	defer ts.Close()
+	B := ts.URL
+	daf := login(t, B, "daftar")
+	dr := login(t, B, "drb")
+	rad := login(t, B, "rad")
+	okp := login(t, B, "okp")
+	ksr := login(t, B, "kasir")
+	mgr := login(t, B, "mgr")
+	prw := login(t, B, "prw")
+
+	rad.get("/operasi/input?no=x", 403)
+	okp.get("/radiologi", 403)
+	ksr.get("/radiologi", 403)
+
+	daf.postOK("/pasien/simpan", url.Values{"nm_pasien": {"Joko Susilo"}, "jk": {"L"}, "tgl_lahir": {"1985-03-03"}, "kd_pj": {"A09"}})
+	daf.postOK("/registrasi", url.Values{"no_rkm_medis": {"000001"}, "kd_poli": {"IGDK"}, "kd_dokter": {"D0000006"}, "kd_pj": {"A09"}})
+	today := core.Today()
+	no := strings.ReplaceAll(today, "-", "/") + "/000001"
+	rw := "/rawat?no=" + url.QueryEscape(no)
+	dr.get(rw+"&tab=radiologi", 200)
+	dr.get(rw+"&tab=operasi", 200)
+	dr.postOK("/rawat/radiologi", url.Values{"no_rawat": {no}, "kd_jenis_prw": {"RAD003", "RAD005"}, "diagnosa_klinis": {"Susp. appendisitis"}})
+	ord := q1(t, d, "SELECT noorder FROM permintaan_radiologi WHERE no_rawat=?", no)
+	if !strings.HasPrefix(ord, "PR") || !strings.Contains(rad.get("/radiologi", 200), ord) {
+		t.Fatal("order radiologi tidak muncul")
+	}
+	rad.get("/radiologi/periksa?no="+ord, 200)
+	rad.postOK("/radiologi/periksa", url.Values{"noorder": {ord}, "nip": {"P006"}, "kd_dokter": {"D0000007"}, "kd": {"RAD003", "RAD005"}, "kv_RAD003": {"75"}, "mas_RAD003": {"20"}, "proyeksi_RAD003": {"AP"}})
+	if !strings.Contains(rad.get("/radiologi?st=expertise", 200), ord) {
+		t.Fatal("tab menunggu bacaan")
+	}
+	// upload: file teks ditolak, PNG diterima
+	u, _ := rad.upload("/radiologi/gambar", map[string]string{"noorder": ord}, "x.png", []byte("bukan gambar <script>"))
+	if !strings.Contains(u, "format+tidak+didukung") && !strings.Contains(u, "format%20tidak") {
+		t.Fatalf("file palsu seharusnya ditolak: %s", u)
+	}
+	u, _ = rad.upload("/radiologi/gambar", map[string]string{"noorder": ord}, "foto.png", tinyPNG)
+	if strings.Contains(u, "err=") {
+		t.Fatalf("upload png: %s", u)
+	}
+	loc := q1(t, d, "SELECT lokasi_gambar FROM gambar_radiologi")
+	file := strings.TrimPrefix(loc, "radiologi/")
+	if body := dr.get("/radiologi/gambar/"+file, 200); !strings.HasPrefix(body, "\x89PNG") {
+		t.Fatal("gambar tidak tersaji")
+	}
+	ksr.get("/radiologi/gambar/"+file, 403)
+	dr.get("/radiologi/gambar/..%2f..%2fetc%2fpasswd", 404)
+	dr.get("/radiologi/gambar/00000000000000000000000000000000.png", 404)
+	rad.postOK("/radiologi/expertise", url.Values{"noorder": {ord}, "hasil": {"Kesan: appendisitis akut"}})
+	if !strings.Contains(dr.get("/radiologi/cetak?no="+ord, 200), "appendisitis akut") {
+		t.Fatal("cetak radiologi")
+	}
+	if !strings.Contains(dr.get(rw+"&tab=radiologi", 200), "1 gambar") {
+		t.Fatal("hasil radiologi di ERM")
+	}
+
+	// operasi
+	daf.postOK("/rawat/kamar-masuk", url.Values{"no_rawat": {no}, "kd_kamar": {"MLT.01"}, "diagnosa_awal": {"Appendisitis"}, "kd_dokter": {"D0000006"}})
+	dr.postOK("/operasi/booking", url.Values{"no_rawat": {no}, "from": {"rawat"}, "kode_paket": {"OP001"}, "kd_ruang_ok": {"OK1"}, "kd_dokter": {"D0000006"}, "tanggal": {today}, "jam_mulai": {"20:00"}, "jam_selesai": {"21:00"}})
+	dr.postErr("/operasi/booking", url.Values{"no_rawat": {no}, "kode_paket": {"OP002"}, "kd_ruang_ok": {"OK1"}, "kd_dokter": {"D0000006"}, "tanggal": {today}, "jam_mulai": {"20:30"}, "jam_selesai": {"21:30"}}, "sudah dipakai")
+	if !strings.Contains(okp.get("/operasi", 200), "JOKO SUSILO") {
+		t.Fatal("jadwal OK")
+	}
+	dr.postErr("/operasi/mulai", url.Values{"no_rawat": {no}, "kode_paket": {"OP001"}, "tanggal": {today}, "jam_mulai": {"20:00:00"}}, "kamar operasi")
+	okp.postOK("/operasi/mulai", url.Values{"no_rawat": {no}, "kode_paket": {"OP001"}, "tanggal": {today}, "jam_mulai": {"20:00:00"}, "from": {"jadwal"}})
+	okp.get("/operasi/input?no="+url.QueryEscape(no)+"&paket=OP001", 200)
+	ksr.postErr("/kasir/bayar", url.Values{"no_rawat": {no}}, "dirawat")
+	tglOp := core.Now().Add(-30 * time.Minute).Format("2006-01-02T15:04")
+	okp.postOK("/operasi/simpan", url.Values{"no_rawat": {no}, "kode_paket": {"OP001"}, "tgl_operasi": {tglOp}, "jenis_anasthesi": {"SAB"}, "kategori": {"Sedang"},
+		"operator1": {"D0000006"}, "asisten_operator1": {"P001"}, "dokter_anestesi": {"D0000008"}, "instrumen": {"-"}})
+	if st := q1(t, d, "SELECT status FROM booking_operasi WHERE no_rawat=?", no); st != "Selesai" {
+		t.Fatalf("booking %s", st)
+	}
+	tglDB := q1(t, d, "SELECT tgl_operasi FROM operasi WHERE no_rawat=?", no)
+	dr.postOK("/operasi/laporan", url.Values{"no_rawat": {no}, "tanggal": {tglOp}, "diagnosa_preop": {"K35.8"}, "diagnosa_postop": {"K35.8"}, "selesaioperasi": {core.Now().Format("2006-01-02T15:04")}, "permintaan_pa": {"Ya"}, "laporan_operasi": {"Appendektomi terbuka."}})
+	if !strings.Contains(dr.get("/operasi/laporan?no="+url.QueryEscape(no)+"&tgl="+url.QueryEscape(tglDB), 200), "Appendektomi terbuka") {
+		t.Fatal("cetak laporan operasi")
+	}
+	okp.postOK("/operasi/bhp", url.Values{"no_rawat": {no}, "kd_obat": {"OK001"}, "jumlah": {"2"}})
+	prw.get("/operasi", 200)
+	prw.postErr("/rawat/radiologi", url.Values{"no_rawat": {no}, "kd_jenis_prw": {"RAD001"}}, "peran")
+	prw.postOK("/rawat/kamar-pulang", url.Values{"no_rawat": {no}, "stts_pulang": {"Membaik"}})
+	body := ksr.get("/kasir/billing?no="+url.QueryEscape(no), 200)
+	for _, w := range []string{"Radiologi", "USG Abdomen", "Appendektomi", "BHP OK: Benang Vicryl"} {
+		if !strings.Contains(body, w) {
+			t.Fatalf("billing tanpa %q", w)
+		}
+	}
+	ksr.postOK("/kasir/bayar", url.Values{"no_rawat": {no}})
+	okp.postErr("/operasi/bhp", url.Values{"no_rawat": {no}, "kd_obat": {"OK002"}, "jumlah": {"1"}}, "sudah dibayar")
+	body = mgr.get("/laporan", 200)
+	if !strings.Contains(body, "Appendektomi") || !strings.Contains(body, "USG Abdomen") {
+		t.Fatal("laporan radiologi/operasi")
+	}
+	n := 0
+	for _, pg := range []string{rw, rw + "&tab=radiologi", rw + "&tab=operasi", "/operasi", "/operasi/input?no=" + url.QueryEscape(no)} {
+		n += dr.crawl(pg)
+	}
+	n += ksr.crawl("/kasir?st=Sudah+Bayar")
+	n += daf.crawl("/registrasi")
+	n += rad.crawl("/radiologi?st=selesai")
+	if n < 20 {
+		t.Fatalf("crawl hanya %d tautan", n)
+	}
+	if l := lb.Take(); strings.Contains(l, "render") || strings.Contains(l, "query:") || strings.Contains(l, "scan:") || strings.Contains(l, "error GET") {
+		t.Fatalf("ada error template/query di log:\n%s", l)
+	}
+}
+
+var hrefRe = regexp.MustCompile(`href="([^"#]+)"`)
+
+// crawl membuka semua tautan internal di halaman dan memastikan tidak ada yang berakhir dengan error
+// (menangkap bug encoding URL ganda seperti no_rawat yang ber-garis miring).
+func (c *client) crawl(page string) int {
+	c.t.Helper()
+	body := c.get(page, 200)
+	n := 0
+	seen := map[string]bool{}
+	for _, m := range hrefRe.FindAllStringSubmatch(body, -1) {
+		h := strings.ReplaceAll(m[1], "&amp;", "&")
+		if strings.HasPrefix(h, "http") || strings.HasPrefix(h, "javascript:") || strings.Contains(h, "/static/") || strings.Contains(h, "csv=") || seen[h] {
+			continue
+		}
+		seen[h] = true
+		ref, _ := url.Parse(c.base + page)
+		u, err := ref.Parse(h)
+		if err != nil {
+			c.t.Fatalf("href %q: %v", h, err)
+		}
+		resp, err := c.c.Get(u.String())
+		if err != nil {
+			c.t.Fatal(err)
+		}
+		io.Copy(io.Discard, resp.Body)
+		resp.Body.Close()
+		if resp.StatusCode != 200 && resp.StatusCode != 403 {
+			c.t.Fatalf("tautan %s di %s -> %d", h, page, resp.StatusCode)
+		}
+		if e := resp.Request.URL.Query().Get("err"); e != "" {
+			c.t.Fatalf("tautan %s di %s -> error %q", h, page, e)
+		}
+		n++
+	}
+	return n
 }

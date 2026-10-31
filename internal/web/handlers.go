@@ -90,6 +90,7 @@ func (s *Server) routes() {
 	m.HandleFunc("GET "+p+"/bpjs/sep/cetak", s.guard(rBPJS, s.bpjsSEPCetak))
 
 	m.HandleFunc("GET "+p+"/laporan", s.guard(rLaporan, s.laporan))
+	s.routesPenunjang()
 	m.HandleFunc("GET "+p+"/admin/users", s.guard(rAdmin, s.usersPage))
 	m.HandleFunc("POST "+p+"/admin/users", s.guard(rAdmin, s.usersSimpan))
 }
@@ -109,6 +110,8 @@ func (s *Server) dashboard(w http.ResponseWriter, r *http.Request) {
 	d["Bed"] = s.val(ctx, "SELECT COUNT(*) FROM kamar WHERE statusdata='1'")
 	d["Resep"] = s.val(ctx, "SELECT COUNT(*) FROM resep_obat WHERE tgl_perawatan IS NULL")
 	d["Lab"] = s.val(ctx, "SELECT COUNT(*) FROM permintaan_lab WHERE tgl_hasil IS NULL")
+	d["Rad"] = s.val(ctx, "SELECT COUNT(*) FROM permintaan_radiologi WHERE tgl_hasil IS NULL")
+	d["OK"] = s.val(ctx, "SELECT COUNT(*) FROM booking_operasi WHERE tanggal=? AND status<>'Selesai'", t)
 	d["BelumBayar"] = s.val(ctx, "SELECT COUNT(*) FROM reg_periksa WHERE status_bayar='Belum Bayar' AND stts NOT IN ('Batal','Belum') AND tgl_registrasi>=DATE_SUB(?, INTERVAL 30 DAY)", t)
 	d["Pendapatan"] = s.val(ctx, "SELECT IFNULL(SUM(totalbiaya),0) FROM billing WHERE tgl_byr=? AND status='Tagihan'", t)
 	d["PerPoli"] = s.rows(ctx, `SELECT pl.nm_poli, COUNT(*) jml, SUM(r.stts='Belum') belum FROM reg_periksa r JOIN poliklinik pl ON pl.kd_poli=r.kd_poli WHERE r.tgl_registrasi=? AND r.stts<>'Batal' GROUP BY pl.nm_poli ORDER BY jml DESC`, t)

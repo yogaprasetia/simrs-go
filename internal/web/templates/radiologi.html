@@ -1,0 +1,6 @@
+{{define "content"}}<h1>Radiologi</h1>
+<div class="tabs"><a href="?" class="{{if eq .St ""}}on{{end}}">Menunggu pemeriksaan</a><a href="?st=expertise" class="{{if eq .St "expertise"}}on{{end}}">Menunggu bacaan</a><a href="?st=selesai" class="{{if eq .St "selesai"}}on{{end}}">Selesai (7 hari)</a></div>
+<table class="list"><tr><th>No. order</th><th>Waktu</th><th>Pasien</th><th>Pemeriksaan</th><th>Perujuk</th><th>Klinis</th><th></th></tr>
+{{range .List}}<tr class="click" onclick="location='{{$.P}}/radiologi/periksa?no={{.noorder}}'"><td>{{.noorder}}</td><td>{{tgl .tgl_permintaan}} {{.jam_permintaan}}</td><td>{{.no_rkm_medis}} <b>{{.nm_pasien}}</b> ({{.jk}})<br><small>{{.no_rawat}} · {{.status}}</small></td><td>{{.isi}}</td><td>{{.nm_dokter}}</td><td>{{.diagnosa_klinis}}{{if .informasi_tambahan}}<br><small class="muted">{{.informasi_tambahan}}</small>{{end}}</td>
+<td class="act">{{if .tgl_hasil}}<a href="{{$.P}}/radiologi/cetak?no={{.noorder}}" target="_blank" onclick="event.stopPropagation()">Cetak</a>{{else if .tgl_sampel}}<span class="st">Bacaan</span>{{else}}<span class="st st-Belum">Periksa</span>{{end}}</td></tr>
+{{else}}<tr><td colspan="7" class="muted">Tidak ada order</td></tr>{{end}}</table>{{end}}

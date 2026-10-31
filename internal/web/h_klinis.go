@@ -77,6 +77,17 @@ func (s *Server) rawatPage(w http.ResponseWriter, r *http.Request) {
 	d["Lab"] = s.rows(ctx, `SELECT l.noorder, l.tgl_permintaan, l.jam_permintaan, l.tgl_hasil, l.diagnosa_klinis,
 		(SELECT GROUP_CONCAT(j.nm_perawatan SEPARATOR ', ') FROM permintaan_pemeriksaan_lab p JOIN jns_perawatan_lab j ON j.kd_jenis_prw=p.kd_jenis_prw WHERE p.noorder=l.noorder) isi
 		FROM permintaan_lab l WHERE l.no_rawat=? ORDER BY l.noorder DESC`, no)
+	d["MasterRad"] = s.rows(ctx, "SELECT kd_jenis_prw, nm_perawatan, total_byr FROM jns_perawatan_radiologi WHERE status='1' ORDER BY nm_perawatan")
+	d["Rad"] = s.rows(ctx, `SELECT l.noorder, l.tgl_permintaan, l.jam_permintaan, l.tgl_sampel, l.tgl_hasil, l.diagnosa_klinis,
+		(SELECT GROUP_CONCAT(j.nm_perawatan SEPARATOR ', ') FROM permintaan_pemeriksaan_radiologi p JOIN jns_perawatan_radiologi j ON j.kd_jenis_prw=p.kd_jenis_prw WHERE p.noorder=l.noorder) isi,
+		(SELECT h.hasil FROM app_radiologi_order a JOIN hasil_radiologi h ON h.no_rawat=l.no_rawat AND h.tgl_periksa=a.tgl_periksa AND h.jam=a.jam WHERE a.noorder=l.noorder) hasil,
+		(SELECT COUNT(*) FROM app_radiologi_order a JOIN gambar_radiologi g ON g.no_rawat=l.no_rawat AND g.tgl_periksa=a.tgl_periksa AND g.jam=a.jam WHERE a.noorder=l.noorder) gambar
+		FROM permintaan_radiologi l WHERE l.no_rawat=? ORDER BY l.noorder DESC`, no)
+	d["Paket"] = s.rows(ctx, "SELECT kode_paket, nm_perawatan, kategori FROM paket_operasi WHERE status='1' ORDER BY kategori DESC, nm_perawatan")
+	d["RuangOK"] = s.rows(ctx, "SELECT * FROM ruang_ok ORDER BY kd_ruang_ok")
+	d["BookingOK"] = s.rows(ctx, `SELECT b.tanggal, TIME_FORMAT(b.jam_mulai,'%H:%i') mulai, TIME_FORMAT(b.jam_selesai,'%H:%i') selesai, b.status, p.nm_perawatan, o.nm_ruang_ok FROM booking_operasi b
+		JOIN paket_operasi p ON p.kode_paket=b.kode_paket JOIN ruang_ok o ON o.kd_ruang_ok=b.kd_ruang_ok WHERE b.no_rawat=? ORDER BY b.tanggal, b.jam_mulai`, no)
+	d["OpsDone"] = s.rows(ctx, `SELECT o.tgl_operasi, p.nm_perawatan, o.jenis_anasthesi, (SELECT COUNT(*) FROM laporan_operasi l WHERE l.no_rawat=o.no_rawat AND l.tanggal=o.tgl_operasi) lap FROM operasi o JOIN paket_operasi p ON p.kode_paket=o.kode_paket WHERE o.no_rawat=? ORDER BY o.tgl_operasi`, no)
 	d["Kamar"] = s.rows(ctx, `SELECT k.*, b.nm_bangsal FROM kamar_inap k JOIN kamar m ON m.kd_kamar=k.kd_kamar JOIN bangsal b ON b.kd_bangsal=m.kd_bangsal WHERE k.no_rawat=? ORDER BY tgl_masuk, jam_masuk`, no)
 	d["KamarKosong"] = s.rows(ctx, `SELECT k.kd_kamar, b.nm_bangsal, k.kelas, k.trf_kamar FROM kamar k JOIN bangsal b ON b.kd_bangsal=k.kd_bangsal WHERE k.status='KOSONG' AND k.statusdata='1' ORDER BY k.kelas, k.kd_kamar`)
 	d["Dokter"] = s.rows(ctx, "SELECT kd_dokter, nm_dokter FROM dokter WHERE status='1' ORDER BY nm_dokter")
@@ -215,6 +226,20 @@ func (s *Server) rawatAksi(w http.ResponseWriter, r *http.Request) {
 			return
 		})
 		msg, to = "Permintaan lab "+nr+" terkirim", to+"&tab=lab"
+	case "radiologi":
+		if !need(u.Has("dokter")) {
+			return
+		}
+		dok := u.KdDokter
+		if dok == "" {
+			dok = reg.KdDokter
+		}
+		var nr string
+		err = s.tx(r, func(tx *sql.Tx) (e error) {
+			nr, e = core.PermintaanRadiologi(ctx, tx, no, dok, r.FormValue("diagnosa_klinis"), r.FormValue("informasi_tambahan"), r.Form["kd_jenis_prw"])
+			return
+		})
+		msg, to = "Permintaan radiologi "+nr+" terkirim", to+"&tab=radiologi"
 	case "biaya":
 		if !need(u.Has("kasir", "perawat")) {
 			return

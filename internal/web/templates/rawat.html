@@ -4,7 +4,7 @@
 {{if .Alergi}}<div class="alert">⚠ Alergi: {{.Alergi}}</div>{{end}}</div>
 <div class="right">{{if $lock}}<span class="tag big">{{if eq2 $r.Stts "Batal"}}BATAL{{else}}SUDAH BAYAR — terkunci{{end}}</span>{{end}}
 {{if has .User "kasir"}}<a class="btn" href="{{.P}}/kasir/billing?no={{$r.NoRawat}}">Billing</a>{{end}}</div></div>
-<div class="tabs">{{range split "soap:SOAP / CPPT,diagnosa:Diagnosa & Prosedur,tindakan:Tindakan,resep:Resep,lab:Laboratorium,kamar:Kamar / Ranap,riwayat:Riwayat" ","}}{{$kv := split . ":"}}<a href="?no={{q $r.NoRawat}}&tab={{index $kv 0}}" class="{{if eq2 $.Tab (index $kv 0)}}on{{end}}">{{index $kv 1}}</a>{{end}}</div>
+<div class="tabs">{{range split "soap:SOAP / CPPT,diagnosa:Diagnosa & Prosedur,tindakan:Tindakan,resep:Resep,lab:Laboratorium,radiologi:Radiologi,operasi:Operasi / VK,kamar:Kamar / Ranap,riwayat:Riwayat" ","}}{{$kv := split . ":"}}<a href="?no={{$r.NoRawat}}&tab={{index $kv 0}}" class="{{if eq2 $.Tab (index $kv 0)}}on{{end}}">{{index $kv 1}}</a>{{end}}</div>
 
 {{if eq .Tab "soap"}}
 {{if and (not $lock) (has .User "dokter" "perawat")}}<form method="post" action="{{.P}}/rawat/soap" class="card form">{{template "csrf" .}}<input type="hidden" name="no_rawat" value="{{$r.NoRawat}}">
@@ -55,6 +55,28 @@
 <div class="checks">{{range .MasterLab}}<label class="chk"><input type="checkbox" name="kd_jenis_prw" value="{{.kd_jenis_prw}}"> {{.nm_perawatan}} <small>{{rp .total_byr}}</small></label>{{end}}</div>
 <label>Diagnosa klinis<input name="diagnosa_klinis"></label><div class="right"><button class="btn primary">Kirim permintaan lab</button></div></form>{{end}}
 <table class="list"><tr><th>No. order</th><th>Waktu</th><th>Pemeriksaan</th><th>Diagnosa klinis</th><th>Hasil</th></tr>{{range .Lab}}<tr><td>{{.noorder}}</td><td>{{tgl .tgl_permintaan}} {{.jam_permintaan}}</td><td>{{.isi}}</td><td>{{.diagnosa_klinis}}</td><td>{{if .tgl_hasil}}<a href="{{$.P}}/lab/cetak?no={{.noorder}}" target="_blank">Lihat hasil</a>{{else}}<span class="st st-Belum">Menunggu</span>{{end}}</td></tr>{{else}}<tr><td colspan="5" class="muted">Belum ada permintaan</td></tr>{{end}}</table>
+{{end}}
+
+{{if eq .Tab "radiologi"}}
+{{if and (not $lock) (has .User "dokter")}}<form method="post" action="{{.P}}/rawat/radiologi" class="card form">{{template "csrf" .}}<input type="hidden" name="no_rawat" value="{{$r.NoRawat}}">
+<div class="checks">{{range .MasterRad}}<label class="chk"><input type="checkbox" name="kd_jenis_prw" value="{{.kd_jenis_prw}}"> {{.nm_perawatan}} <small>{{rp .total_byr}}</small></label>{{end}}</div>
+<div class="g2"><label>Diagnosa klinis<input name="diagnosa_klinis"></label><label>Informasi tambahan<input name="informasi_tambahan" maxlength="60" placeholder="mis. hamil? alergi kontras?"></label></div>
+<div class="right"><button class="btn primary">Kirim permintaan radiologi</button></div></form>{{end}}
+<table class="list"><tr><th>No. order</th><th>Waktu</th><th>Pemeriksaan</th><th>Status</th><th>Hasil bacaan</th></tr>{{range .Rad}}<tr><td>{{.noorder}}</td><td>{{tgl .tgl_permintaan}} {{.jam_permintaan}}</td><td>{{.isi}}<br><small class="muted">{{.diagnosa_klinis}}</small></td>
+<td>{{if .tgl_hasil}}<span class="st st-Sudah">Selesai</span>{{else if .tgl_sampel}}<span class="st">Menunggu bacaan</span>{{else}}<span class="st st-Belum">Menunggu pemeriksaan</span>{{end}}</td>
+<td>{{if .hasil}}{{nl .hasil}}<br><a href="{{$.P}}/radiologi/cetak?no={{.noorder}}" target="_blank">Lihat hasil{{if ne .gambar "0"}} + {{.gambar}} gambar{{end}}</a>{{end}}</td></tr>{{else}}<tr><td colspan="5" class="muted">Belum ada permintaan</td></tr>{{end}}</table>
+{{end}}
+
+{{if eq .Tab "operasi"}}
+{{if and (not $lock) (has .User "dokter" "ok")}}<form method="post" action="{{.P}}/operasi/booking" class="card form">{{template "csrf" .}}<input type="hidden" name="no_rawat" value="{{$r.NoRawat}}"><input type="hidden" name="from" value="rawat"><h3>Jadwalkan operasi / persalinan</h3>
+<div class="g3"><label>Tindakan<select name="kode_paket" required>{{range .Paket}}<option value="{{.kode_paket}}">{{.kategori}} · {{.nm_perawatan}}</option>{{end}}</select></label>
+<label>Ruang<select name="kd_ruang_ok">{{range .RuangOK}}<option value="{{.kd_ruang_ok}}">{{.nm_ruang_ok}}</option>{{end}}</select></label>
+<label>Operator<select name="kd_dokter">{{range .Dokter}}<option value="{{.kd_dokter}}" {{if eq2 $.MyDokter .kd_dokter}}selected{{end}}>{{.nm_dokter}}</option>{{end}}</select></label>
+<label>Tanggal<input type="date" name="tanggal" value="{{.Today}}" required></label><label>Jam mulai<input type="time" name="jam_mulai" required></label><label>Perkiraan selesai<input type="time" name="jam_selesai" required></label></div>
+<div class="right"><button class="btn primary">Simpan jadwal</button></div></form>{{end}}
+<table class="list"><tr><th>Jadwal</th><th>Tindakan</th><th>Ruang</th><th>Status</th></tr>{{range .BookingOK}}<tr><td>{{tgl .tanggal}} {{.mulai}}–{{.selesai}}</td><td>{{.nm_perawatan}}</td><td>{{.nm_ruang_ok}}</td><td><span class="st {{if eq2 .status "Selesai"}}st-Sudah{{else if eq2 .status "Menunggu"}}st-Belum{{end}}">{{.status}}</span></td></tr>{{else}}<tr><td colspan="4" class="muted">Belum ada jadwal operasi</td></tr>{{end}}</table>
+<table class="list"><tr><th>Waktu operasi</th><th>Tindakan</th><th>Anestesi</th><th>Laporan</th></tr>{{range .OpsDone}}<tr><td>{{.tgl_operasi}}</td><td>{{.nm_perawatan}}</td><td>{{.jenis_anasthesi}}</td><td>{{if ne .lap "0"}}<a href="{{$.P}}/operasi/laporan?no={{$r.NoRawat}}&tgl={{.tgl_operasi}}" target="_blank">Cetak laporan</a>{{else}}<span class="muted">belum</span>{{end}}</td></tr>{{end}}</table>
+<a class="btn" href="{{.P}}/operasi/input?no={{$r.NoRawat}}">Buka layar kamar operasi →</a>
 {{end}}
 
 {{if eq .Tab "kamar"}}

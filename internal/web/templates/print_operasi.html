@@ -1,0 +1,7 @@
+{{define "content"}}{{$r := .R}}{{$l := .L}}<div class="paper">{{template "kop" .}}<h3>LAPORAN OPERASI</h3>
+<table class="kv"><tr><td>No. RM / Nama</td><td>{{$r.NoRM}} / {{$r.Nama}} ({{$r.JK}}, {{$r.Umur}})</td><td>No. rawat</td><td>{{$r.NoRawat}}</td></tr>
+<tr><td>Tindakan</td><td>{{.O.nm_perawatan}}</td><td>Anestesi</td><td>{{.O.jenis_anasthesi}}</td></tr><tr><td>Mulai</td><td>{{$l.tanggal}}</td><td>Selesai</td><td>{{$l.selesaioperasi}}</td></tr>
+<tr><td>Operator</td><td>{{.O.op1}}</td><td>Dokter anestesi</td><td>{{.O.anes}}</td></tr><tr><td>Asisten</td><td>{{.O.ast}}</td><td>Kirim PA</td><td>{{$l.permintaan_pa}}</td></tr>
+<tr><td>Dx pra-bedah</td><td>{{$l.diagnosa_preop}}</td><td>Dx pasca-bedah</td><td>{{$l.diagnosa_postop}}</td></tr><tr><td>Jaringan</td><td>{{$l.jaringan_dieksekusi}}</td><td>No. implan</td><td>{{$l.nomor_implan}}</td></tr></table>
+<h4>Uraian operasi</h4><div class="expertise">{{nl $l.laporan_operasi}}</div>
+<div class="ttd">Operator,<br><br><br>{{.O.op1}}</div><button class="btn noprint" onclick="print()">Cetak</button></div>{{end}}

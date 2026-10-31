@@ -517,3 +517,250 @@ CREATE TABLE IF NOT EXISTS setting (
   kode_ppk varchar(15) DEFAULT '',
   kode_ppkinhealth varchar(15) DEFAULT ''
 );
+
+
+-- ===================================================== petugas (non-dokter)
+CREATE TABLE IF NOT EXISTS petugas (
+  nip varchar(20) NOT NULL PRIMARY KEY,
+  nama varchar(50) NOT NULL,
+  jk enum('L','P') DEFAULT 'L',
+  jbtn varchar(30) DEFAULT '',
+  status enum('0','1') NOT NULL DEFAULT '1'
+);
+
+-- ===================================================== radiologi
+CREATE TABLE IF NOT EXISTS jns_perawatan_radiologi (
+  kd_jenis_prw varchar(15) NOT NULL PRIMARY KEY,
+  nm_perawatan varchar(80) NOT NULL,
+  bagian_rs double NOT NULL DEFAULT 0,
+  bhp double NOT NULL DEFAULT 0,
+  tarif_perujuk double NOT NULL DEFAULT 0,
+  tarif_tindakan_dokter double NOT NULL DEFAULT 0,
+  tarif_tindakan_petugas double NOT NULL DEFAULT 0,
+  kso double NOT NULL DEFAULT 0,
+  menejemen double NOT NULL DEFAULT 0,
+  total_byr double NOT NULL DEFAULT 0,
+  kd_pj char(3) NOT NULL DEFAULT '-',
+  status enum('0','1') NOT NULL DEFAULT '1',
+  kelas varchar(15) NOT NULL DEFAULT '-'
+);
+
+CREATE TABLE IF NOT EXISTS permintaan_radiologi (
+  noorder varchar(15) NOT NULL PRIMARY KEY,
+  no_rawat varchar(17) NOT NULL,
+  tgl_permintaan date NOT NULL,
+  jam_permintaan time NOT NULL,
+  tgl_sampel date DEFAULT NULL,
+  jam_sampel time DEFAULT NULL,
+  tgl_hasil date DEFAULT NULL,
+  jam_hasil time DEFAULT NULL,
+  dokter_perujuk varchar(20) NOT NULL,
+  status enum('ralan','ranap') NOT NULL,
+  informasi_tambahan varchar(60) DEFAULT '',
+  diagnosa_klinis varchar(80) DEFAULT '',
+  KEY idx_rawat (no_rawat)
+);
+
+CREATE TABLE IF NOT EXISTS permintaan_pemeriksaan_radiologi (
+  noorder varchar(15) NOT NULL,
+  kd_jenis_prw varchar(15) NOT NULL,
+  stts_bayar enum('Sudah','Belum') DEFAULT 'Belum',
+  PRIMARY KEY (noorder, kd_jenis_prw)
+);
+
+CREATE TABLE IF NOT EXISTS periksa_radiologi (
+  no_rawat varchar(17) NOT NULL,
+  nip varchar(20) NOT NULL,
+  kd_jenis_prw varchar(15) NOT NULL,
+  tgl_periksa date NOT NULL,
+  jam time NOT NULL,
+  dokter_perujuk varchar(20) NOT NULL,
+  bagian_rs double NOT NULL DEFAULT 0,
+  bhp double NOT NULL DEFAULT 0,
+  tarif_perujuk double NOT NULL DEFAULT 0,
+  tarif_tindakan_dokter double NOT NULL DEFAULT 0,
+  tarif_tindakan_petugas double NOT NULL DEFAULT 0,
+  kso double DEFAULT 0,
+  menejemen double DEFAULT 0,
+  biaya double NOT NULL DEFAULT 0,
+  kd_dokter varchar(20) NOT NULL,
+  status enum('Ranap','Ralan') DEFAULT NULL,
+  proyeksi varchar(50) NOT NULL DEFAULT '',
+  kV varchar(10) NOT NULL DEFAULT '',
+  mAS varchar(10) NOT NULL DEFAULT '',
+  FFD varchar(10) NOT NULL DEFAULT '',
+  BSF varchar(10) NOT NULL DEFAULT '',
+  inak varchar(10) NOT NULL DEFAULT '',
+  jml_penyinaran varchar(10) NOT NULL DEFAULT '',
+  dosis varchar(20) NOT NULL DEFAULT '',
+  PRIMARY KEY (no_rawat, kd_jenis_prw, tgl_periksa, jam)
+);
+
+CREATE TABLE IF NOT EXISTS hasil_radiologi (
+  no_rawat varchar(17) NOT NULL,
+  tgl_periksa date NOT NULL,
+  jam time NOT NULL,
+  hasil text NOT NULL,
+  PRIMARY KEY (no_rawat, tgl_periksa, jam)
+);
+
+CREATE TABLE IF NOT EXISTS gambar_radiologi (
+  no_rawat varchar(17) NOT NULL,
+  tgl_periksa date NOT NULL,
+  jam time NOT NULL,
+  lokasi_gambar varchar(500) NOT NULL,
+  PRIMARY KEY (no_rawat, tgl_periksa, jam, lokasi_gambar)
+);
+
+-- penghubung order -> waktu pemeriksaan (Khanza menautkan lewat no_rawat+tgl+jam)
+CREATE TABLE IF NOT EXISTS app_radiologi_order (
+  noorder varchar(15) NOT NULL PRIMARY KEY,
+  tgl_periksa date NOT NULL,
+  jam time NOT NULL
+);
+
+-- ===================================================== kamar operasi / VK
+CREATE TABLE IF NOT EXISTS ruang_ok (
+  kd_ruang_ok varchar(3) NOT NULL PRIMARY KEY,
+  nm_ruang_ok varchar(50) DEFAULT NULL
+);
+
+CREATE TABLE IF NOT EXISTS paket_operasi (
+  kode_paket varchar(15) NOT NULL PRIMARY KEY,
+  nm_perawatan varchar(80) NOT NULL,
+  kategori enum('Kebidanan','Operasi') DEFAULT 'Operasi',
+  operator1 double NOT NULL DEFAULT 0,
+  operator2 double NOT NULL DEFAULT 0,
+  operator3 double NOT NULL DEFAULT 0,
+  asisten_operator1 double NOT NULL DEFAULT 0,
+  asisten_operator2 double NOT NULL DEFAULT 0,
+  asisten_operator3 double NOT NULL DEFAULT 0,
+  instrumen double NOT NULL DEFAULT 0,
+  dokter_anak double NOT NULL DEFAULT 0,
+  perawaat_resusitas double NOT NULL DEFAULT 0,
+  dokter_anestesi double NOT NULL DEFAULT 0,
+  asisten_anestesi double NOT NULL DEFAULT 0,
+  asisten_anestesi2 double NOT NULL DEFAULT 0,
+  bidan double NOT NULL DEFAULT 0,
+  bidan2 double NOT NULL DEFAULT 0,
+  bidan3 double NOT NULL DEFAULT 0,
+  perawat_luar double NOT NULL DEFAULT 0,
+  sewa_ok double NOT NULL DEFAULT 0,
+  alat double NOT NULL DEFAULT 0,
+  akomodasi double NOT NULL DEFAULT 0,
+  bagian_rs double NOT NULL DEFAULT 0,
+  omloop double NOT NULL DEFAULT 0,
+  omloop2 double NOT NULL DEFAULT 0,
+  omloop3 double NOT NULL DEFAULT 0,
+  omloop4 double NOT NULL DEFAULT 0,
+  omloop5 double NOT NULL DEFAULT 0,
+  sarpras double NOT NULL DEFAULT 0,
+  dokter_pjanak double NOT NULL DEFAULT 0,
+  dokter_umum double NOT NULL DEFAULT 0,
+  kd_pj char(3) DEFAULT '-',
+  status enum('0','1') DEFAULT '1',
+  kelas varchar(15) DEFAULT '-'
+);
+
+CREATE TABLE IF NOT EXISTS booking_operasi (
+  no_rawat varchar(17) NOT NULL,
+  kode_paket varchar(15) NOT NULL,
+  tanggal date NOT NULL,
+  jam_mulai time NOT NULL,
+  jam_selesai time DEFAULT NULL,
+  status enum('Menunggu','Proses Operasi','Selesai') DEFAULT 'Menunggu',
+  kd_dokter varchar(20) DEFAULT NULL,
+  kd_ruang_ok varchar(3) NOT NULL,
+  PRIMARY KEY (no_rawat, kode_paket, tanggal, jam_mulai),
+  KEY idx_ruang (kd_ruang_ok, tanggal)
+);
+
+CREATE TABLE IF NOT EXISTS operasi (
+  no_rawat varchar(17) NOT NULL,
+  tgl_operasi datetime NOT NULL,
+  jenis_anasthesi varchar(8) NOT NULL DEFAULT '-',
+  kategori varchar(30) DEFAULT '-',
+  operator1 varchar(20) NOT NULL,
+  operator2 varchar(20) NOT NULL DEFAULT '-',
+  operator3 varchar(20) NOT NULL DEFAULT '-',
+  asisten_operator1 varchar(20) NOT NULL DEFAULT '-',
+  asisten_operator2 varchar(20) NOT NULL DEFAULT '-',
+  asisten_operator3 varchar(20) DEFAULT '-',
+  instrumen varchar(20) DEFAULT '-',
+  dokter_anak varchar(20) NOT NULL DEFAULT '-',
+  perawaat_resusitas varchar(20) NOT NULL DEFAULT '-',
+  dokter_anestesi varchar(20) NOT NULL DEFAULT '-',
+  asisten_anestesi varchar(20) NOT NULL DEFAULT '-',
+  asisten_anestesi2 varchar(20) DEFAULT '-',
+  bidan varchar(20) NOT NULL DEFAULT '-',
+  bidan2 varchar(20) DEFAULT '-',
+  bidan3 varchar(20) DEFAULT '-',
+  perawat_luar varchar(20) NOT NULL DEFAULT '-',
+  omloop varchar(20) DEFAULT '-',
+  omloop2 varchar(20) DEFAULT '-',
+  omloop3 varchar(20) DEFAULT '-',
+  omloop4 varchar(20) DEFAULT '-',
+  omloop5 varchar(20) DEFAULT '-',
+  dokter_pjanak varchar(20) DEFAULT '-',
+  dokter_umum varchar(20) DEFAULT '-',
+  kode_paket varchar(15) NOT NULL,
+  biayaoperator1 double NOT NULL DEFAULT 0,
+  biayaoperator2 double NOT NULL DEFAULT 0,
+  biayaoperator3 double NOT NULL DEFAULT 0,
+  biayaasisten_operator1 double NOT NULL DEFAULT 0,
+  biayaasisten_operator2 double NOT NULL DEFAULT 0,
+  biayaasisten_operator3 double DEFAULT 0,
+  biayainstrumen double DEFAULT 0,
+  biayadokter_anak double NOT NULL DEFAULT 0,
+  biayaperawaat_resusitas double NOT NULL DEFAULT 0,
+  biayadokter_anestesi double NOT NULL DEFAULT 0,
+  biayaasisten_anestesi double NOT NULL DEFAULT 0,
+  biayaasisten_anestesi2 double DEFAULT 0,
+  biayabidan double NOT NULL DEFAULT 0,
+  biayabidan2 double DEFAULT 0,
+  biayabidan3 double DEFAULT 0,
+  biayaperawat_luar double NOT NULL DEFAULT 0,
+  biayaalat double NOT NULL DEFAULT 0,
+  biayasewaok double NOT NULL DEFAULT 0,
+  akomodasi double DEFAULT 0,
+  bagian_rs double NOT NULL DEFAULT 0,
+  biaya_omloop double DEFAULT 0,
+  biaya_omloop2 double DEFAULT 0,
+  biaya_omloop3 double DEFAULT 0,
+  biaya_omloop4 double DEFAULT 0,
+  biaya_omloop5 double DEFAULT 0,
+  biayasarpras double DEFAULT 0,
+  biaya_dokter_pjanak double DEFAULT 0,
+  biaya_dokter_umum double DEFAULT 0,
+  status enum('Ranap','Ralan') DEFAULT NULL,
+  PRIMARY KEY (no_rawat, tgl_operasi, kode_paket)
+);
+
+CREATE TABLE IF NOT EXISTS laporan_operasi (
+  no_rawat varchar(17) NOT NULL,
+  tanggal datetime NOT NULL,
+  diagnosa_preop varchar(100) NOT NULL,
+  diagnosa_postop varchar(100) NOT NULL,
+  jaringan_dieksekusi varchar(100) NOT NULL DEFAULT '',
+  selesaioperasi datetime NOT NULL,
+  permintaan_pa enum('Ya','Tidak') NOT NULL DEFAULT 'Tidak',
+  nomor_implan varchar(50) NOT NULL DEFAULT '',
+  laporan_operasi text NOT NULL,
+  PRIMARY KEY (no_rawat, tanggal)
+);
+
+CREATE TABLE IF NOT EXISTS obatbhp_ok (
+  kd_obat varchar(15) NOT NULL PRIMARY KEY,
+  nm_obat varchar(50) NOT NULL,
+  kode_sat char(4) NOT NULL,
+  hargasatuan double NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS beri_obat_operasi (
+  no_rawat varchar(17) NOT NULL,
+  tanggal datetime NOT NULL,
+  kd_obat varchar(15) NOT NULL,
+  hargasatuan double NOT NULL,
+  jumlah double NOT NULL,
+  KEY idx_rawat (no_rawat)
+);

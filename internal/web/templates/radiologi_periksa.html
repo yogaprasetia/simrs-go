@@ -1,0 +1,17 @@
+{{define "content"}}{{$o := .O}}<h1>Radiologi {{$o.noorder}} {{if .Hasil}}<a class="btn" href="{{.P}}/radiologi/cetak?no={{$o.noorder}}" target="_blank">Cetak hasil</a>{{end}}</h1>
+<div class="card info">{{$o.no_rkm_medis}} <b>{{$o.nm_pasien}}</b> ({{$o.jk}}, {{$o.umur}}) · {{$o.no_rawat}} · {{$o.nm_poli}} · perujuk {{$o.nm_dokter}} · {{$o.png_jawab}}<br>Klinis: <b>{{$o.diagnosa_klinis}}</b>{{if $o.informasi_tambahan}} · {{$o.informasi_tambahan}}{{end}}</div>
+{{if not $o.tgl_sampel}}
+<form method="post" action="{{.P}}/radiologi/periksa" class="card form">{{template "csrf" .}}<input type="hidden" name="noorder" value="{{$o.noorder}}"><h3>1. Pelaksanaan pemeriksaan (radiografer)</h3>
+<table class="list paparan"><tr><th>Pemeriksaan</th><th>Proyeksi</th><th>kV</th><th>mAs</th><th>FFD</th><th>BSF</th><th>Inak</th><th>Jml sinar</th><th>Dosis</th><th class="r">Tarif</th></tr>
+{{range .Items}}<tr><td><input type="hidden" name="kd" value="{{.kd_jenis_prw}}">{{.nm_perawatan}}</td><td><input name="proyeksi_{{.kd_jenis_prw}}"></td><td><input name="kv_{{.kd_jenis_prw}}"></td><td><input name="mas_{{.kd_jenis_prw}}"></td><td><input name="ffd_{{.kd_jenis_prw}}"></td><td><input name="bsf_{{.kd_jenis_prw}}"></td><td><input name="inak_{{.kd_jenis_prw}}"></td><td><input name="jml_{{.kd_jenis_prw}}"></td><td><input name="dosis_{{.kd_jenis_prw}}"></td><td class="r">{{rp .total_byr}}</td></tr>{{end}}</table>
+<div class="g2"><label>Radiografer<select name="nip" required>{{range .Petugas}}<option value="{{.nip}}">{{.nama}}</option>{{end}}</select></label><label>Dokter radiologi (penanggung jawab)<select name="kd_dokter">{{range .Dokter}}<option value="{{.kd_dokter}}">{{.nm_dokter}}</option>{{end}}</select></label></div>
+<div class="right"><button class="btn primary">Simpan pemeriksaan</button></div></form>
+{{else}}
+<table class="list"><tr><th>Pemeriksaan</th><th>Proyeksi</th><th>kV / mAs / FFD</th><th>Dosis</th><th>Radiografer</th><th>Dokter</th><th class="r">Biaya</th></tr>{{range .Items}}<tr><td>{{.nm_perawatan}}</td><td>{{.proyeksi}}</td><td>{{.kV}} / {{.mAS}} / {{.FFD}}</td><td>{{.dosis}}</td><td>{{.radiografer}}</td><td>{{.dokter_rad}}</td><td class="r">{{rp .biaya}}</td></tr>{{end}}</table>
+<div class="grid2">
+<div class="card"><h3>2. Gambar</h3>{{if .Img}}<div class="gallery">{{range .Img}}{{if eq .pdf "true"}}<a class="pdf" href="{{$.P}}/radiologi/gambar/{{.file}}" target="_blank">📄 PDF</a>{{else}}<a href="{{$.P}}/radiologi/gambar/{{.file}}" target="_blank"><img src="{{$.P}}/radiologi/gambar/{{.file}}" alt="gambar radiologi" loading="lazy"></a>{{end}}{{end}}</div>{{else}}<p class="muted">Belum ada gambar.</p>{{end}}
+<form method="post" action="{{.P}}/radiologi/gambar" enctype="multipart/form-data" class="form">{{template "csrf" .}}<input type="hidden" name="noorder" value="{{$o.noorder}}"><label>Unggah JPG/PNG/WEBP/PDF (boleh banyak, maks. 20 MB)<input type="file" name="gambar" accept="image/jpeg,image/png,image/webp,application/pdf" multiple required></label><button class="btn">Unggah</button></form></div>
+<form method="post" action="{{.P}}/radiologi/expertise" class="card form">{{template "csrf" .}}<input type="hidden" name="noorder" value="{{$o.noorder}}"><h3>3. Hasil bacaan (expertise)</h3>
+<textarea name="hasil" rows="12" required placeholder="Deskripsi temuan...&#10;&#10;Kesan:">{{with .Hasil}}{{.hasil}}{{end}}</textarea>
+<div class="right"><button class="btn primary">{{if .Hasil}}Perbarui{{else}}Simpan{{end}} hasil</button></div></form></div>
+{{end}}{{end}}

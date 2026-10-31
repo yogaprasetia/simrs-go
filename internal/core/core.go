@@ -334,7 +334,7 @@ func BatalRegistrasi(ctx context.Context, tx *sql.Tx, noRawat string) error {
 	if _, err := mustOpen(ctx, tx, noRawat); err != nil {
 		return err
 	}
-	for _, t := range []string{"pemeriksaan_ralan", "rawat_jl_dr", "detail_pemberian_obat", "periksa_lab", "kamar_inap", "resep_obat", "diagnosa_pasien"} {
+	for _, t := range []string{"pemeriksaan_ralan", "rawat_jl_dr", "detail_pemberian_obat", "periksa_lab", "kamar_inap", "resep_obat", "diagnosa_pasien", "permintaan_lab", "permintaan_radiologi", "periksa_radiologi", "operasi", "booking_operasi", "beri_obat_operasi"} {
 		if n, _ := one[int](ctx, tx, "SELECT COUNT(*) FROM "+t+" WHERE no_rawat=?", noRawat); n > 0 {
 			return fmt.Errorf("tidak bisa dibatalkan: sudah ada data di %s", t)
 		}
@@ -900,6 +900,9 @@ func HitungBilling(ctx context.Context, q Q, noRawat string) (*Bill, error) {
 		{"Ralan Dokter", `SELECT j.nm_perawatan, t.biaya_rawat, COUNT(*) FROM rawat_jl_dr t JOIN jns_perawatan j ON j.kd_jenis_prw=t.kd_jenis_prw WHERE t.no_rawat=? GROUP BY j.nm_perawatan,t.biaya_rawat`},
 		{"Ranap Dokter", `SELECT j.nm_perawatan, t.biaya_rawat, COUNT(*) FROM rawat_inap_dr t JOIN jns_perawatan_inap j ON j.kd_jenis_prw=t.kd_jenis_prw WHERE t.no_rawat=? GROUP BY j.nm_perawatan,t.biaya_rawat`},
 		{"Laborat", `SELECT j.nm_perawatan, p.biaya, COUNT(*) FROM periksa_lab p JOIN jns_perawatan_lab j ON j.kd_jenis_prw=p.kd_jenis_prw WHERE p.no_rawat=? GROUP BY j.nm_perawatan,p.biaya`},
+		{"Radiologi", `SELECT j.nm_perawatan, p.biaya, COUNT(*) FROM periksa_radiologi p JOIN jns_perawatan_radiologi j ON j.kd_jenis_prw=p.kd_jenis_prw WHERE p.no_rawat=? GROUP BY j.nm_perawatan,p.biaya`},
+		{"Operasi", `SELECT CONCAT(p.nm_perawatan,' (',DATE_FORMAT(o.tgl_operasi,'%d-%m-%Y %H:%i'),')'), ` + biayaOperasiExpr + `, 1 FROM operasi o JOIN paket_operasi p ON p.kode_paket=o.kode_paket WHERE o.no_rawat=? ORDER BY o.tgl_operasi`},
+		{"Operasi", `SELECT CONCAT('BHP OK: ',k.nm_obat), b.hargasatuan, SUM(b.jumlah) FROM beri_obat_operasi b JOIN obatbhp_ok k ON k.kd_obat=b.kd_obat WHERE b.no_rawat=? GROUP BY k.nm_obat,b.hargasatuan`},
 		{"Obat", `SELECT b.nama_brng, d.biaya_obat, SUM(d.jml) FROM detail_pemberian_obat d JOIN databarang b ON b.kode_brng=d.kode_brng WHERE d.no_rawat=? GROUP BY b.nama_brng,d.biaya_obat`},
 		{"Tambahan", `SELECT nama_biaya, besar_biaya, 1 FROM tambahan_biaya WHERE no_rawat=?`},
 	}
@@ -954,6 +957,12 @@ func BayarBilling(ctx context.Context, tx *sql.Tx, noRawat string) (string, erro
 	if n, _ := one[int](ctx, tx, "SELECT COUNT(*) FROM permintaan_lab WHERE no_rawat=? AND tgl_hasil IS NULL", noRawat); n > 0 {
 		return "", errors.New("masih ada permintaan lab yang belum ada hasilnya")
 	}
+	if n, _ := one[int](ctx, tx, "SELECT COUNT(*) FROM permintaan_radiologi WHERE no_rawat=? AND tgl_hasil IS NULL", noRawat); n > 0 {
+		return "", errors.New("masih ada permintaan radiologi yang belum ada hasilnya")
+	}
+	if n, _ := one[int](ctx, tx, "SELECT COUNT(*) FROM booking_operasi WHERE no_rawat=? AND status='Proses Operasi'", noRawat); n > 0 {
+		return "", errors.New("operasi pasien masih berlangsung")
+	}
 	b, err := HitungBilling(ctx, tx, noRawat)
 	if err != nil {
 		return "", err
@@ -987,6 +996,9 @@ func BayarBilling(ctx context.Context, tx *sql.Tx, noRawat string) (string, erro
 		return "", err
 	}
 	if _, err = tx.ExecContext(ctx, "UPDATE permintaan_pemeriksaan_lab SET stts_bayar='Sudah' WHERE noorder IN (SELECT noorder FROM permintaan_lab WHERE no_rawat=?)", noRawat); err != nil {
+		return "", err
+	}
+	if _, err = tx.ExecContext(ctx, "UPDATE permintaan_pemeriksaan_radiologi SET stts_bayar='Sudah' WHERE noorder IN (SELECT noorder FROM permintaan_radiologi WHERE no_rawat=?)", noRawat); err != nil {
 		return "", err
 	}
 	_, err = tx.ExecContext(ctx, "UPDATE reg_periksa SET status_bayar='Sudah Bayar', stts=IF(stts IN ('Belum'),'Sudah',stts) WHERE no_rawat=?", noRawat)

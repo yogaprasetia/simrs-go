@@ -34,13 +34,14 @@ var tplFS embed.FS
 var staticFS embed.FS
 
 type Server struct {
-	DB       *sql.DB
-	BPJS     *bpjs.Client
-	Secret   []byte
-	Prefix   string // mis. "" atau "/simrs"
-	pages    map[string]*template.Template
-	mux      *http.ServeMux
-	Instansi string
+	DB        *sql.DB
+	BPJS      *bpjs.Client
+	Secret    []byte
+	Prefix    string // mis. "" atau "/simrs"
+	pages     map[string]*template.Template
+	mux       *http.ServeMux
+	Instansi  string
+	UploadDir string
 }
 
 type User struct {
@@ -72,7 +73,7 @@ func userOf(r *http.Request) *User { u, _ := r.Context().Value(userKey).(*User);
 // ------------------------------------------------------------------ setup
 
 func New(db *sql.DB, b *bpjs.Client, secret []byte) (*Server, error) {
-	s := &Server{DB: db, BPJS: b, Secret: secret, pages: map[string]*template.Template{}, mux: http.NewServeMux()}
+	s := &Server{DB: db, BPJS: b, Secret: secret, UploadDir: "uploads", pages: map[string]*template.Template{}, mux: http.NewServeMux()}
 	_ = db.QueryRow("SELECT nama_instansi FROM setting LIMIT 1").Scan(&s.Instansi)
 	if s.Instansi == "" {
 		s.Instansi = "Rumah Sakit"
@@ -255,6 +256,8 @@ var menu = []MenuItem{
 	{"/ranap", "Rawat Inap", "🛏", []string{"dokter", "perawat", "pendaftaran"}},
 	{"/farmasi", "Farmasi", "💊", []string{"farmasi"}},
 	{"/lab", "Laboratorium", "🧪", []string{"lab"}},
+	{"/radiologi", "Radiologi", "🩻", []string{"radiologi"}},
+	{"/operasi", "Kamar Operasi / VK", "⚕", []string{"ok", "dokter", "perawat", "kasir"}},
 	{"/kasir", "Kasir", "💰", []string{"kasir"}},
 	{"/bpjs", "Bridging BPJS", "🏥", []string{"bpjs", "pendaftaran"}},
 	{"/laporan", "Laporan", "📊", []string{"manajemen"}},

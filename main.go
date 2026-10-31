@@ -138,6 +138,7 @@ func main() {
 		log.Fatal(err)
 	}
 	srv.Prefix = strings.TrimRight(env("BASE_PATH", ""), "/")
+	srv.UploadDir = env("UPLOAD_DIR", "uploads")
 	addr := env("LISTEN", "127.0.0.1:8090")
 	hs := &http.Server{Addr: addr, Handler: srv, ReadHeaderTimeout: 10 * time.Second, ReadTimeout: 60 * time.Second, WriteTimeout: 90 * time.Second}
 	go func() {

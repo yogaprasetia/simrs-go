@@ -142,3 +142,36 @@ INSERT IGNORE INTO icd9 VALUES
 ('38.93','Venous catheterization, not elsewhere classified'),('99.04','Transfusion of packed cells'),('57.94','Insertion of indwelling urinary catheter'),
 ('23.09','Extraction of other tooth'),('23.2','Restoration of tooth by filling'),('88.78','Diagnostic ultrasound of gravid uterus'),
 ('47.09','Other appendectomy'),('73.59','Other manually assisted delivery'),('96.04','Insertion of endotracheal tube'),('93.96','Other oxygen enrichment');
+
+
+INSERT IGNORE INTO petugas (nip,nama,jk,jbtn) VALUES
+('P001','Ns. Rudi Hartanto','L','Perawat OK'),('P002','Ns. Lina Marlina','P','Perawat OK'),('P003','Ns. Agus Salim','L','Perawat Anestesi'),
+('P004','Bd. Yuni Astuti','P','Bidan'),('P005','Bd. Tari Ningsih','P','Bidan'),('P006','Rizky Pratama, A.Md.Rad','L','Radiografer'),('P007','Maya Sari, A.Md.Rad','P','Radiografer');
+
+INSERT IGNORE INTO dokter (kd_dokter,nm_dokter,jk,kd_sps,no_ijn_praktek,kd_dokter_bpjs) VALUES
+('D0000007','dr. Fajar Nugroho, Sp.Rad','L','UMUM','SIP/007/2025','10007'),
+('D0000008','dr. Wahyu Hidayat, Sp.An','L','UMUM','SIP/008/2025','10008');
+
+INSERT IGNORE INTO jns_perawatan_radiologi (kd_jenis_prw,nm_perawatan,bagian_rs,bhp,tarif_perujuk,tarif_tindakan_dokter,tarif_tindakan_petugas,kso,menejemen,total_byr) VALUES
+('RAD001','Thorax PA',60000,25000,5000,35000,15000,0,10000,150000),
+('RAD002','Thorax AP/Lateral',75000,30000,5000,45000,20000,0,10000,185000),
+('RAD003','BNO (Abdomen Polos)',60000,25000,5000,35000,15000,0,10000,150000),
+('RAD004','Cranium AP/Lateral',70000,30000,5000,40000,15000,0,10000,170000),
+('RAD005','USG Abdomen',100000,20000,10000,120000,0,0,25000,275000),
+('RAD006','USG Obstetri',80000,15000,10000,100000,0,0,20000,225000),
+('RAD007','CT Scan Kepala Tanpa Kontras',450000,100000,25000,200000,50000,0,75000,900000),
+('RAD008','Pedis AP/Oblique',55000,20000,5000,30000,15000,0,10000,135000);
+
+INSERT IGNORE INTO ruang_ok VALUES ('OK1','Kamar Operasi 1'),('OK2','Kamar Operasi 2'),('VK1','Ruang Bersalin (VK)');
+
+INSERT IGNORE INTO paket_operasi (kode_paket,nm_perawatan,kategori,operator1,asisten_operator1,instrumen,dokter_anestesi,asisten_anestesi,dokter_anak,perawaat_resusitas,bidan,perawat_luar,sewa_ok,alat,akomodasi,bagian_rs,omloop,sarpras) VALUES
+('OP001','Appendektomi','Operasi',2500000,350000,200000,900000,250000,0,0,0,100000,1200000,600000,0,800000,100000,200000),
+('OP002','Herniorafi','Operasi',2800000,350000,200000,900000,250000,0,0,0,100000,1200000,650000,0,850000,100000,200000),
+('OP003','Sectio Caesarea','Operasi',3500000,400000,250000,1100000,300000,600000,200000,250000,100000,1500000,700000,0,1000000,100000,250000),
+('OP004','Debridement Luka','Operasi',800000,150000,100000,450000,150000,0,0,0,50000,500000,250000,0,300000,50000,100000),
+('VK001','Persalinan Normal','Kebidanan',1200000,0,0,0,0,300000,150000,500000,0,0,250000,400000,300000,0,100000),
+('VK002','Persalinan dengan Vakum','Kebidanan',1800000,0,0,0,0,300000,150000,500000,0,0,450000,400000,400000,0,100000);
+
+INSERT IGNORE INTO obatbhp_ok VALUES
+('OK001','Benang Vicryl 2/0','BTL',95000),('OK002','Benang Silk 3/0','BTL',45000),('OK003','Propofol 200 mg','AMP',85000),
+('OK004','Bupivacaine Spinal 0,5%','AMP',75000),('OK005','Kasa Steril','SAC',8000),('OK006','Handscoon Steril','SAC',12000),('OK007','Mesh Hernia','SAC',850000);

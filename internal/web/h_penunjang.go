@@ -236,7 +236,7 @@ func (s *Server) kasirBilling(w http.ResponseWriter, r *http.Request) {
 	d["Nota"] = s.val(r.Context(), "SELECT no_nota FROM nota_jalan WHERE no_rawat=? UNION SELECT no_nota FROM nota_inap WHERE no_rawat=? LIMIT 1", no, no)
 	d["SEP"] = s.val(r.Context(), "SELECT no_sep FROM bridging_sep WHERE no_rawat=? LIMIT 1", no)
 	d["Tambahan"] = s.rows(r.Context(), "SELECT * FROM tambahan_biaya WHERE no_rawat=?", no)
-	d["Pending"] = s.val(r.Context(), "SELECT (SELECT COUNT(*) FROM resep_obat WHERE no_rawat=? AND tgl_perawatan IS NULL)+(SELECT COUNT(*) FROM permintaan_lab WHERE no_rawat=? AND tgl_hasil IS NULL)", no, no)
+	d["Pending"] = s.val(r.Context(), "SELECT (SELECT COUNT(*) FROM resep_obat WHERE no_rawat=? AND tgl_perawatan IS NULL)+(SELECT COUNT(*) FROM permintaan_lab WHERE no_rawat=? AND tgl_hasil IS NULL)+(SELECT COUNT(*) FROM permintaan_radiologi WHERE no_rawat=? AND tgl_hasil IS NULL)+(SELECT COUNT(*) FROM booking_operasi WHERE no_rawat=? AND status='Proses Operasi')", no, no, no, no)
 	s.render(w, r, "kasir_billing", d, 200)
 }
 
@@ -460,6 +460,8 @@ func (s *Server) laporan(w http.ResponseWriter, r *http.Request) {
 	d["Pendapatan"] = s.rows(ctx, `SELECT b.status, SUM(b.totalbiaya) total FROM billing b WHERE b.tgl_byr BETWEEN ? AND ? AND b.status<>'Tagihan' GROUP BY b.status ORDER BY total DESC`, dari, sampai)
 	d["PendapatanBayar"] = s.rows(ctx, `SELECT pj.png_jawab, COUNT(*) jml, SUM(b.totalbiaya) total FROM billing b JOIN reg_periksa r ON r.no_rawat=b.no_rawat JOIN penjab pj ON pj.kd_pj=r.kd_pj WHERE b.tgl_byr BETWEEN ? AND ? AND b.status='Tagihan' GROUP BY pj.png_jawab`, dari, sampai)
 	d["Obat"] = s.rows(ctx, `SELECT b.nama_brng, b.kode_sat, SUM(d.jml) jml, SUM(d.total) total FROM detail_pemberian_obat d JOIN databarang b ON b.kode_brng=d.kode_brng WHERE d.tgl_perawatan BETWEEN ? AND ? GROUP BY b.kode_brng ORDER BY jml DESC LIMIT 10`, dari, sampai)
+	d["Rad"] = s.rows(ctx, `SELECT j.nm_perawatan, COUNT(*) jml, SUM(p.biaya) total FROM periksa_radiologi p JOIN jns_perawatan_radiologi j ON j.kd_jenis_prw=p.kd_jenis_prw WHERE p.tgl_periksa BETWEEN ? AND ? GROUP BY j.nm_perawatan ORDER BY jml DESC`, dari, sampai)
+	d["Ops"] = s.rows(ctx, `SELECT p.kategori, p.nm_perawatan, COUNT(*) jml, SUM(`+core.BiayaOperasiExpr()+`) total FROM operasi o JOIN paket_operasi p ON p.kode_paket=o.kode_paket WHERE DATE(o.tgl_operasi) BETWEEN ? AND ? GROUP BY p.kategori, p.nm_perawatan ORDER BY p.kategori, jml DESC`, dari, sampai)
 	// indikator rawat inap: BOR, ALOS, BTO, TOI (Barber-Johnson)
 	t1, _ := time.Parse("2006-01-02", dari)
 	t2, _ := time.Parse("2006-01-02", sampai)

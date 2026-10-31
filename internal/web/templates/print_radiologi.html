@@ -1,0 +1,6 @@
+{{define "content"}}{{$o := .O}}<div class="paper">{{template "kop" .}}<h3>HASIL PEMERIKSAAN RADIOLOGI</h3>
+<table class="kv"><tr><td>No. RM / Nama</td><td>{{$o.no_rkm_medis}} / {{$o.nm_pasien}} ({{$o.jk}}, {{$o.umur}})</td><td>No. order</td><td>{{$o.noorder}}</td></tr><tr><td>Perujuk</td><td>{{$o.nm_dokter}} · {{$o.nm_poli}}</td><td>Tgl periksa</td><td>{{tgl $o.tgl_periksa}} {{$o.jam_periksa}}</td></tr>
+<tr><td>Pemeriksaan</td><td colspan="3">{{range $i, $x := .Items}}{{if $i}}, {{end}}{{$x.nm_perawatan}}{{end}}</td></tr><tr><td>Klinis</td><td colspan="3">{{$o.diagnosa_klinis}}</td></tr></table>
+<div class="expertise">{{nl .Hasil.hasil}}</div>
+{{if .Img}}<div class="gallery noprint">{{range .Img}}{{if ne .pdf "true"}}<img src="{{$.P}}/radiologi/gambar/{{.file}}" alt="">{{end}}{{end}}</div>{{end}}
+<div class="ttd">Dokter Spesialis Radiologi,<br><br><br>{{with index .Items 0}}{{.dokter_rad}}{{end}}</div><button class="btn noprint" onclick="print()">Cetak</button></div>{{end}}
